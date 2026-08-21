@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PLUS North–South Expressway — Region &amp; Section Boundary Map</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a2540">
+<meta name="description" content="Interactive Northern/Central/Southern region and section-office boundary map for the PLUS North–South Expressway, with RSA/layby, interchange, and location search.">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NSE Boundary Map">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a2540; --bg-2:#071b31; --panel:#0e2f52; --panel-2:#0a2645;
+    --land-line:#4f9fd9; --land-line-dim:#2c5a86;
+    --text:#eaf1fb; --text-muted:#83a3c4; --text-dim:#517092; --border:#1d4a73;
+    --amber:#f5a623; --violet:#c084fc; --teal-1:#2dd4bf; --teal-2:#22b8e0; --teal-3:#38bdf8;
+    --green:#4ade80;
+    --radius:10px;
+    --font-display:'Rajdhani',sans-serif; --font-body:'Inter',system-ui,sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at 15% 0%, #0e3255 0%, transparent 55%),radial-gradient(ellipse at 100% 100%, #0a2138 0%, transparent 50%),var(--bg);
+    color:var(--text); font-family:var(--font-body); min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  .app{max-width:1400px;margin:0 auto;padding:28px 24px 48px;}
+  header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;border-bottom:1px solid var(--border);padding-bottom:18px;margin-bottom:22px;}
+  .eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-3);margin:0 0 6px;}
+  h1{font-family:var(--font-display);font-weight:700;letter-spacing:.01em;font-size:clamp(22px,3vw,32px);margin:0;color:#fff;}
+  h1 small{display:block;font-family:var(--font-body);font-weight:400;font-size:14px;color:var(--text-muted);margin-top:4px;letter-spacing:0;}
+  main.layout{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:start;}
+  @media (max-width:900px){main.layout{grid-template-columns:1fr;}}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel-2) 100%);border:1px solid var(--border);border-radius:var(--radius);}
+
+  .map-panel{position:relative;padding:18px 18px 10px;}
+  .map-panel .panel-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+  .panel-title h2{font-family:var(--font-display);font-size:16px;text-transform:uppercase;letter-spacing:.06em;margin:0;color:var(--text);}
+
+  .toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+  .toggle button{font-family:var(--font-mono);font-size:11px;letter-spacing:.03em;padding:7px 12px;background:var(--bg-2);color:var(--text-muted);border:none;cursor:pointer;transition:background .15s ease,color .15s ease;}
+  .toggle button + button{border-left:1px solid var(--border);}
+  .toggle button.active{background:var(--teal-2);color:#04202b;font-weight:600;}
+  .toggle button:hover:not(.active){color:var(--text);}
+  @media (max-width:640px){
+    .panel-title{flex-direction:column;align-items:stretch;}
+    .panel-title .toggle{width:100%;}
+    .panel-title .toggle button{flex:1;padding:9px 6px;font-size:10.5px;}
+  }
+
+  .search-wrap{position:relative;margin-bottom:12px;}
+  .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none;}
+  .search-input{
+    width:100%;padding:10px 34px;border-radius:9px;border:1px solid var(--border);
+    background:var(--bg-2);color:var(--text);font-family:var(--font-body);font-size:13px;
+  }
+  .search-input::placeholder{color:var(--text-dim);}
+  .search-input:focus{outline:none;border-color:var(--teal-2);}
+  .search-clear{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;
+    border:none;background:transparent;color:var(--text-dim);font-size:18px;line-height:1;
+    cursor:pointer;border-radius:50%;
+  }
+  .search-clear:hover{color:var(--text);background:rgba(255,255,255,.06);}
+  .search-results{
+    position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel-2);
+    border:1px solid var(--border);border-radius:10px;
+    overflow-y:auto;z-index:30;box-shadow:0 16px 40px rgba(0,0,0,.55);display:none;
+  }
+  .search-results{max-height:300px;}
+  .search-results.show{display:block;}
+  .search-group-label{
+    font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--text-dim);padding:9px 13px 4px;
+  }
+  .search-item{
+    padding:8px 13px;cursor:pointer;font-size:12.5px;color:var(--text);
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  }
+  .search-item:hover, .search-item.active{background:rgba(255,255,255,.05);}
+  .search-item .sub{color:var(--text-dim);font-size:10.3px;font-family:var(--font-mono);white-space:nowrap;flex:none;}
+  .search-item .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .search-empty{padding:16px 13px;color:var(--text-dim);font-size:12px;text-align:center;}
+
+  .locate-halo{fill:none;stroke:#ffffff;stroke-width:2;pointer-events:none;filter:url(#glow);animation:pulseHalo 1.5s ease-out infinite;}
+
+  svg#map{width:100%;height:auto;aspect-ratio:600/720;display:block;background:radial-gradient(ellipse at 45% 35%, #0d2c4c 0%, var(--bg-2) 88%);border-radius:8px;border:1px solid var(--border);touch-action:manipulation;}
+  .map-caption{font-size:11px;color:var(--text-dim);text-align:center;padding:8px 4px 4px;letter-spacing:.02em;}
+
+  .land{stroke:var(--land-line);stroke-width:1;stroke-linejoin:round;}
+  .land.route-state{fill:#153e66;} .land.other-state{fill:#0f3255;stroke:var(--land-line-dim);}
+  .state-label{fill:#6f95bd;font-family:var(--font-mono);font-size:8px;letter-spacing:.09em;text-transform:uppercase;pointer-events:none;opacity:.55;}
+  .state-label.route-state{fill:#8fb0d4;font-weight:500;opacity:.6;}
+  .geo-label{fill:#2e567e;font-family:var(--font-mono);font-size:8px;letter-spacing:.22em;}
+  .compass text{fill:var(--text-muted);font-family:var(--font-mono);font-size:10px;} .compass path{stroke:var(--text-muted);stroke-width:1.2;fill:none;}
+  .frame{fill:none;stroke:var(--border);stroke-width:1;}
+
+  .base-spine{fill:none;stroke:#22415f;stroke-width:2;}
+  .base-spine.gap{stroke-dasharray:2 3;stroke:#2c5273;}
+
+  .seg-hit{fill:none;stroke:transparent;stroke-width:18;cursor:pointer;}
+  .seg-line{fill:none;stroke-linecap:round;stroke-linejoin:round;transition:stroke-width .15s ease, filter .15s ease, opacity .8s ease;}
+  .seg-line.current{stroke-width:5.5;}
+  .seg-line.superseded{stroke-width:3.5;stroke-dasharray:1 6;opacity:.8;}
+  .seg-group:hover .seg-line.current{stroke-width:7.5;filter:url(#glow);}
+  .seg-group:hover .seg-line.superseded{stroke-width:5;}
+  .seg-group.selected .seg-line.current{stroke-width:8;filter:url(#glow);}
+  .seg-group.selected .seg-line.superseded{stroke-width:5.5;opacity:1;}
+
+  .tick-line{stroke:#eaf1fb;stroke-width:1.1;} .tick-dot{fill:var(--bg);stroke-width:1.6;r:2.6;cursor:pointer;}
+  .tick-dot:hover{stroke:#fff;}
+  .tick-label{font-family:var(--font-mono);font-size:9px;fill:var(--text);font-weight:600;opacity:0;pointer-events:none;transition:opacity .12s ease;}
+  .tick-sub{font-family:var(--font-mono);font-size:7.4px;fill:var(--text-muted);opacity:0;pointer-events:none;transition:opacity .12s ease;}
+  .tick-label.show, .tick-sub.show{opacity:1;}
+
+  .city-dot{fill:#0a2540;stroke:var(--text-dim);stroke-width:1;r:1.4;cursor:pointer;}
+  .city-dot:hover{stroke:var(--text-muted);}
+  .city-label{font-family:var(--font-body);font-size:8.4px;fill:var(--text-muted);opacity:0;pointer-events:none;transition:opacity .12s ease;}
+  .city-label.show{opacity:1;}
+
+  .spur-marker{fill:var(--bg-2);stroke:#7ea8cc;stroke-width:1.2;stroke-dasharray:2 1.5;cursor:pointer;}
+  .spur-marker:hover, .spur-marker.selected{stroke:#fff;fill:#12395e;}
+  .spur-label{font-family:var(--font-mono);font-size:7.6px;fill:#7ea8cc;letter-spacing:.03em;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .12s ease;}
+  .spur-label.show, .spur-label.selected{opacity:1;fill:#fff;}
+
+  .office-marker{fill:var(--green);stroke:#08331d;stroke-width:1;cursor:pointer;}
+  .office-marker.region-office{fill:var(--amber);stroke:#5c3d0a;}
+  .office-ring{fill:none;stroke:var(--amber);stroke-width:1.1;pointer-events:none;}
+  .office-label{font-family:var(--font-mono);font-size:7.8px;fill:#8be9ac;font-weight:600;cursor:pointer;}
+  .office-label.region-office-label{fill:var(--amber);}
+
+  .region-pill-bg{fill:var(--bg-2);stroke-width:1;} .region-pill-text{font-family:var(--font-display);font-size:9.5px;font-weight:600;letter-spacing:.06em;}
+
+  .ic-marker{fill:#0a2540;stroke:#8fb0d4;stroke-width:1;cursor:pointer;}
+  .ic-marker:hover{stroke:#fff;}
+  .ic-marker.toll{fill:var(--amber);stroke:#5c3d0a;}
+
+  .fac-leader{stroke:#4a637e;stroke-width:0.6;opacity:.7;}
+  .fac-marker{cursor:pointer;stroke-width:1;}
+  .fac-marker.nb{fill:#fb7185;stroke:#2c0b12;}
+  .fac-marker.sb{fill:#60a5fa;stroke:#0b2340;}
+  .fac-marker.tunnel{fill:#94a3b8;stroke:#1e293b;}
+  .fac-marker:hover{stroke:#fff;}
+  .fac-label{font-family:var(--font-mono);font-size:6.6px;fill:#9fb4cc;cursor:pointer;pointer-events:none;opacity:0;transition:opacity .12s ease;}
+  .fac-label.show{opacity:1;}
+  .fac-halo{fill:none;stroke:#ffffff;stroke-width:1.6;pointer-events:none;filter:url(#glow);animation:pulseHalo 1.5s ease-out infinite;}
+  @keyframes pulseHalo{0%{r:5;stroke-opacity:.9;}75%{r:12;stroke-opacity:0;}100%{r:12;stroke-opacity:0;}}
+  @media (prefers-reduced-motion: reduce){.fac-halo, .locate-halo{animation:none;r:8;stroke-opacity:.7;}}
+  .table-scroll{max-height:230px;overflow-y:auto;}
+  .table-scroll::-webkit-scrollbar{width:6px;}
+  .table-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  .type-tag{font-size:9px;padding:1px 6px;border-radius:5px;letter-spacing:.02em;}
+  .type-tag.rr{background:rgba(74,222,128,.12);color:var(--green);}
+  .type-tag.layby{background:rgba(96,165,250,.12);color:#60a5fa;}
+  .type-tag.obr{background:rgba(192,132,252,.12);color:var(--violet);}
+  .type-tag.vista{background:rgba(245,166,35,.14);color:var(--amber);}
+  .type-tag.tunnel{background:rgba(148,163,184,.16);color:#94a3b8;}
+  #facTableBody tr.group-row{cursor:default;}
+  #facTableBody tr.group-row:hover{background:transparent;}
+  #facTableBody tr.group-row td{
+    font-family:var(--font-mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--teal-3);background:var(--bg-2);padding:6px 5px;border-bottom:1px solid var(--border);
+  }
+
+  .scalebar line{stroke:var(--text-muted);stroke-width:1;} .scalebar text{font-family:var(--font-mono);font-size:7px;fill:var(--text-muted);}
+
+  .tooltip{position:absolute;pointer-events:none;background:#071b31;border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:11.5px;line-height:1.4;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;z-index:20;max-width:230px;}
+  .tooltip b{font-family:var(--font-mono);color:var(--teal-3);display:block;font-size:10px;letter-spacing:.03em;margin-bottom:2px;}
+
+  aside.side{display:flex;flex-direction:column;gap:16px;}
+  .legend{padding:16px 18px;}
+  .legend h2,.detail h2,.table-wrap h2{font-family:var(--font-display);font-size:14px;text-transform:uppercase;letter-spacing:.06em;margin:0 0 12px;color:var(--text);}
+  .legend-row{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text-muted);padding:4px 0;}
+  .legend-swatch{width:20px;height:4px;border-radius:2px;flex:none;}
+  .legend-swatch.dashed{background:repeating-linear-gradient(90deg,currentColor 0 5px,transparent 5px 9px);height:3px;}
+  .legend-dot{width:9px;height:9px;border-radius:3px;flex:none;border:1px solid rgba(255,255,255,.3);}
+  .legend-row b{color:var(--text);font-weight:600;}
+  .legend-note{font-size:10.8px;color:var(--text-dim);line-height:1.5;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+
+  .detail{padding:16px 18px;min-height:150px;}
+  .detail .empty{font-size:12.5px;color:var(--text-muted);line-height:1.6;}
+  .detail .badge{display:inline-block;font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:10px;}
+  .detail .badge.current{background:rgba(45,212,191,.12);color:var(--teal-1);border:1px solid rgba(45,212,191,.35);}
+  .detail .badge.superseded{background:rgba(192,132,252,.1);color:var(--violet);border:1px solid rgba(192,132,252,.3);}
+  .detail .badge.spur{background:rgba(126,168,204,.12);color:#9dc0e0;border:1px solid rgba(126,168,204,.35);}
+  .detail h3{font-family:var(--font-display);font-size:18px;margin:0 0 8px;color:#fff;}
+  .detail dl{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;margin:0 0 8px;}
+  .detail dt{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;align-self:center;}
+  .detail dd{margin:0;font-size:13px;color:var(--text);font-family:var(--font-mono);}
+  .detail p.note{font-size:11.5px;color:var(--text-muted);line-height:1.5;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--border);}
+  .detail ul.extra{margin:8px 0 0;padding:0 0 0 16px;font-size:11.5px;color:var(--text-muted);line-height:1.6;}
+
+  .table-wrap{padding:16px 18px 18px;}
+  table{width:100%;border-collapse:collapse;font-size:10.8px;}
+  thead th{text-align:left;font-family:var(--font-mono);font-weight:500;font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);padding:0 5px 8px;border-bottom:1px solid var(--border);}
+  tbody td{padding:7px 5px;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--font-mono);vertical-align:middle;}
+  tbody tr{cursor:pointer;transition:background .12s ease;}
+  tbody tr:hover{background:rgba(255,255,255,.03);}
+  tbody tr.selected{background:rgba(45,212,191,.08);}
+  tbody tr:last-child td{border-bottom:none;}
+  td.sw{width:9px;padding-right:0;}
+  .sw-dot{width:8px;height:8px;border-radius:2px;display:inline-block;}
+
+  footer.foot{margin-top:22px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-dim);}
+  footer.foot code{background:var(--panel);padding:2px 6px;border-radius:4px;font-family:var(--font-mono);color:var(--text-muted);}
+
+  @media (prefers-reduced-motion: reduce){.seg-line{transition:none;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div>
+      <p class="eyebrow">PLUS Malaysia · UEM Edgenta · Route E1/E2 &amp; Links · Asset &amp; Maintenance Chainage</p>
+      <h1>North–South Expressway — Region &amp; Section Boundary Map
+        <small>Northern · Central · Southern region offices — Latest and Previous section alignment, KM 24.3 (Dewan Wawasan) → Johor Causeway</small>
+      </h1>
+    </div>
+  </header>
+
+  <main class="layout">
+
+    <section class="card map-panel">
+      <div class="panel-title">
+        <h2>Boundary map</h2>
+        <div class="toggle" id="viewToggle">
+          <button data-view="latest" class="active">Latest alignment</button>
+          <button data-view="previous">Previous alignment</button>
+        </div>
+        <div class="toggle" id="facToggle">
+          <button data-fac="off" class="active">Boundaries</button>
+          <button data-fac="on">+ RSA &amp; Layby</button>
+        </div>
+        <div class="toggle" id="icToggle">
+          <button data-ic="off" class="active">Interchanges off</button>
+          <button data-ic="on">+ Interchanges / toll</button>
+        </div>
+      </div>
+
+      <div class="search-wrap" id="searchWrap">
+        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle><line x1="21" y1="21" x2="16.2" y2="16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search a location — city, section, office, R&amp;R, interchange…" autocomplete="off" spellcheck="false">
+        <button id="searchClear" class="search-clear" type="button" aria-label="Clear search" hidden>&times;</button>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+
+      <svg id="map" viewBox="0 0 600 720" width="600" height="720" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Map of Peninsular Malaysia with state boundaries showing the North-South Expressway region and section office boundaries">
+        <defs>
+          <pattern id="dotgrid" width="22" height="22" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.6" fill="#123657" opacity="0.6"></circle></pattern>
+          <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="3.2" result="blur"></feGaussianBlur>
+            <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+          </filter>
+        </defs>
+        <rect x="0" y="0" width="600" height="720" fill="url(#dotgrid)"></rect>
+        <text x="300" y="20" text-anchor="middle" class="geo-label">THAILAND</text>
+        <text x="22" y="380" class="geo-label" transform="rotate(-90 22 380)" text-anchor="middle">STRAIT OF MELAKA</text>
+        <text x="565" y="260" class="geo-label" transform="rotate(90 565 260)" text-anchor="middle">SOUTH CHINA SEA</text>
+        <text x="500" y="695" text-anchor="middle" class="geo-label">SINGAPORE →</text>
+
+        <g id="states"></g>
+        <g id="stateLabels"></g>
+        <g id="baseSpine"></g>
+        <g id="segments"></g>
+        <g id="ticks"></g>
+        <g id="cities"></g>
+        <g id="spurs"></g>
+        <g id="offices"></g>
+        <g id="interchanges"></g>
+        <g id="facilities"></g>
+        <g id="regionLabels"></g>
+
+        <g class="compass" transform="translate(555,60)">
+          <path d="M0,-14 L0,14 M-6,-6 L0,-14 L6,-6"></path>
+          <text x="0" y="26" text-anchor="middle">N</text>
+        </g>
+        <g class="scalebar" id="scalebar" transform="translate(60,672)"></g>
+        <rect class="frame" x="0.5" y="0.5" width="599" height="719"></rect>
+      </svg>
+      <p class="map-caption">Projected plain map (WGS84, simplified coastline) · dashed grey = KM 0–24.3 stretch not covered in the supplied register · click / tap a segment, spur marker, office, or table row for details</p>
+      <div class="tooltip" id="tooltip"></div>
+    </section>
+
+    <aside class="side">
+      <div class="card legend">
+        <h2>Legend</h2>
+        <div class="legend-row"><span class="legend-dot" style="background:var(--amber)"></span> Northern region (N1N2 · N3N6N7 · N4N5)</div>
+        <div class="legend-row"><span class="legend-dot" style="background:var(--teal-2)"></span> Central region (C1C2 · C3C4 · C5 · C6)</div>
+        <div class="legend-row"><span class="legend-dot" style="background:var(--violet)"></span> Southern region (S1 · S2S3 · S4S5S6)</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:#8be9ac;height:8px;width:8px;border-radius:2px;"></span> Section office</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--amber);height:8px;width:8px;border-radius:2px;"></span> Region + section office ★</div>
+        <div class="legend-row"><span class="legend-swatch dashed" style="color:#7ea8cc"></span> Spur / link road (BKE, Penang Bridge, NKVE, ELITE, SPDH, LINKEDUA)</div>
+        <div class="legend-row"><span class="legend-dot" style="background:#fb7185;border-radius:50%"></span> Rest/layby facility — Northbound (NB)</div>
+        <div class="legend-row"><span class="legend-dot" style="background:#60a5fa;border-radius:50%"></span> Rest/layby facility — Southbound (SB)</div>
+        <div class="legend-row"><span class="legend-dot" style="background:var(--amber);border-radius:0;clip-path:polygon(50% 0,0 100%,100% 100%)"></span> Vista point (▲, colour = direction)</div>
+        <div class="legend-row"><span class="legend-dot" style="background:#94a3b8;border-radius:2px;width:12px;height:6px"></span> Tunnel (both directions)</div>
+        <div class="legend-row"><span class="legend-dot" style="background:#0a2540;border:1px solid #8fb0d4;border-radius:50%"></span> Interchange <span class="legend-dot" style="background:var(--amber);border-radius:50%;margin-left:4px"></span> Toll plaza — opt-in via <b>+ Interchanges / toll</b></div>
+        <p class="legend-note">Solid glowing line = <b>Latest</b> (current) alignment. Dashed muted line = <b>Previous</b> (superseded) alignment — toggle above the map. Turn on <b>+ RSA &amp; Layby</b> or <b>+ Interchanges / toll</b> to plot those layers. KM chainage, interchange, toll-plaza and RSA/layby/OBR/vista/tunnel positions are transcribed from PLUS's official CRO/NRO/SRO engineering strip maps; a few coarse-segment totals/labels (e.g. C5, C6) are kept exactly as printed in the source even where they don't fully reconcile — flagged rather than silently corrected.</p>
+      </div>
+
+      <div class="card detail" id="detail">
+        <h2>Selection</h2>
+        <div class="empty" id="detailBody">Select a region/section, spur marker, or office on the map, or a row in the table below, to view its details.</div>
+      </div>
+
+      <div class="card table-wrap">
+        <h2 id="tableTitle">Section register — Latest alignment</h2>
+        <table>
+          <thead><tr><th></th><th>Region</th><th>Sect.</th><th>KM range</th><th>Total</th><th>Office / link</th></tr></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card table-wrap" id="facCard" style="display:none;">
+        <h2>RSA / Layby / OBR / Vista / Tunnel</h2>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Name</th><th>Type</th><th>Dir.</th><th>KM</th><th>Section</th></tr></thead>
+            <tbody id="facTableBody"></tbody>
+          </table>
+        </div>
+        <p class="legend-note">Grouped by Latest-alignment section, north to south. KM chainage and section code as transcribed from the official CRO/NRO/SRO strip maps.</p>
+      </div>
+    </aside>
+
+  </main>
+
+</div>
+
+<script>
+(function(){
+  var PROJ = { lonMin:100.11840820312503, latMax:6.72257459497998, scale:119.84492721819993, padLeft:50, padTop:50 };
+  function project(lon, lat){ return [ PROJ.padLeft + (lon - PROJ.lonMin) * PROJ.scale, PROJ.padTop + (PROJ.latMax - lat) * PROJ.scale ]; }
+  var KM_PER_DEG = 111.1;
+  var PX_PER_KM = PROJ.scale / KM_PER_DEG;
+
+const STATES = [
+  { name:'Johor', d:'M359.1,516.4 L351.2,540.4 L352.5,543.7 L349.5,549.3 L346.6,565.8 L337.4,572.7 L334.7,584.8 L334.7,590.1 L332.8,592.7 L338.3,595.7 L339.7,600.6 L335.1,601.9 L334.4,604.2 L358.4,632.9 L362.4,631.5 L374.6,633.5 L381.8,639.4 L386.4,646.4 L398.3,648.0 L408.8,655.6 L423.6,663.5 L439.4,673.7 L448.0,695.7 L456.5,703.9 L457.8,699.0 L463.8,694.7 L471.7,690.8 L474.6,687.8 L478.9,681.9 L485.2,682.5 L491.1,678.9 L499.0,681.2 L503.3,684.2 L511.8,685.5 L515.8,681.9 L516.4,671.0 L511.2,663.5 L512.5,661.2 L518.7,669.7 L520.4,676.3 L522.0,677.9 L520.0,680.2 L527.6,686.5 L527.3,690.1 L529.9,694.1 L537.2,695.0 L548.7,691.1 L550.0,681.6 L548.7,673.0 L544.7,658.9 L540.5,651.9 L533.9,633.8 L529.9,633.5 L527.9,627.9 L528.6,625.3 L530.9,624.6 L511.8,593.4 L510.2,587.5 L513.1,585.8 L509.8,578.6 L502.6,572.3 L494.4,557.5 L494.7,550.3 L486.1,540.4 L470.3,536.2 L467.4,551.6 L470.3,552.6 L471.7,557.5 L468.4,560.8 L448.9,550.3 L436.4,545.4 L413.7,553.3 L392.7,545.7 L373.2,522.0 L359.1,516.4 Z', cx:433.8, cy:614.4, onRoute:true },
+  { name:'Melaka', d:'M278.1,565.4 L272.0,569.3 L272.3,571.4 L274.9,572.2 L276.7,571.9 L283.1,575.6 L284.9,580.4 L288.1,583.4 L289.7,583.8 L293.6,589.7 L298.0,589.8 L298.3,591.8 L299.5,591.5 L301.8,592.2 L302.6,593.4 L302.9,592.9 L311.3,595.6 L320.1,600.0 L322.7,599.7 L334.2,604.2 L335.0,601.8 L339.5,600.5 L337.9,595.9 L333.7,595.0 L331.8,591.4 L334.5,589.3 L334.5,585.4 L337.1,572.9 L342.1,568.1 L345.3,566.1 L327.6,561.0 L326.8,559.5 L320.2,557.4 L315.1,558.4 L309.1,560.7 L305.3,559.7 L297.2,556.1 L292.8,561.0 L290.0,560.7 L285.7,561.8 L283.5,561.6 L282.7,563.6 L280.7,565.6 L279.3,564.0 L278.1,565.4 Z', cx:310.0, cy:578.0, onRoute:true },
+  { name:'Negeri Sembilan', d:'M269.1,567.4 L271.2,567.8 L272.5,568.9 L278.3,565.2 L278.8,564.2 L279.3,564.0 L280.8,565.3 L282.5,563.6 L282.9,561.6 L283.9,561.2 L285.6,561.7 L290.1,560.6 L292.6,561.0 L297.1,556.0 L309.0,560.5 L313.2,558.5 L319.5,557.0 L327.0,559.4 L328.1,560.9 L345.8,565.8 L346.5,565.2 L349.9,546.2 L352.1,544.2 L351.0,541.1 L351.3,538.7 L359.1,516.0 L358.0,510.6 L334.2,495.8 L320.2,481.5 L295.1,475.2 L293.0,472.8 L289.5,472.6 L289.1,473.8 L287.3,473.5 L284.4,476.3 L283.0,476.6 L280.4,469.2 L276.6,469.0 L273.2,467.0 L272.8,463.4 L270.4,464.1 L268.1,461.8 L265.4,465.1 L267.9,466.2 L269.4,471.5 L268.9,474.0 L271.5,479.7 L269.6,483.3 L271.9,488.6 L271.7,493.0 L269.4,494.3 L269.1,496.3 L268.1,496.0 L261.0,512.2 L245.9,510.9 L246.2,532.3 L243.2,542.2 L239.9,543.8 L242.6,545.5 L243.9,544.3 L246.0,544.1 L249.8,545.1 L251.4,549.8 L251.3,551.4 L250.3,552.9 L250.9,553.8 L255.4,554.7 L257.7,561.2 L258.4,565.4 L257.3,566.7 L257.9,567.4 L261.0,565.2 L263.0,566.2 L267.9,565.2 L269.1,567.4 Z', cx:302.3, cy:514.1, onRoute:true },
+  { name:'Selangor', d:'M239.7,543.7 L243.8,541.3 L244.9,534.8 L245.8,511.2 L249.1,510.9 L260.9,512.2 L267.7,496.4 L268.7,496.1 L269.6,494.0 L271.8,492.9 L271.8,488.5 L269.3,483.7 L271.3,479.6 L268.8,474.8 L269.2,471.9 L267.5,466.5 L257.2,462.6 L251.6,457.0 L249.2,455.6 L249.1,453.5 L246.6,451.7 L247.6,448.3 L249.0,447.7 L249.9,444.5 L249.2,440.9 L247.3,436.7 L247.4,435.3 L248.9,433.7 L249.8,431.1 L252.5,430.7 L252.8,427.1 L253.9,424.5 L252.1,422.9 L251.4,421.2 L249.8,420.6 L250.0,418.3 L248.2,417.1 L247.9,414.8 L246.6,414.5 L244.6,412.6 L244.8,411.5 L243.3,410.9 L242.1,411.8 L238.8,411.5 L237.6,410.2 L236.1,410.0 L231.2,403.9 L228.2,403.7 L225.7,404.4 L225.0,406.1 L225.6,409.7 L222.9,412.0 L221.6,412.4 L219.9,414.6 L218.2,415.3 L215.3,412.6 L214.5,412.8 L212.9,411.0 L211.2,410.4 L208.4,406.1 L206.1,406.2 L202.3,403.5 L200.7,400.4 L199.1,400.0 L196.1,401.4 L195.0,402.8 L197.5,411.6 L196.7,413.5 L194.3,414.0 L192.3,415.8 L190.7,415.4 L188.7,416.5 L186.1,415.7 L185.7,410.7 L184.9,410.0 L181.5,411.5 L181.4,410.6 L179.6,409.3 L179.6,410.6 L178.8,410.2 L176.9,411.3 L176.4,410.6 L178.6,409.1 L176.1,409.2 L176.0,407.0 L175.5,406.9 L175.4,409.0 L174.5,407.5 L174.0,408.1 L174.3,408.9 L172.2,408.4 L173.1,407.3 L171.9,405.0 L170.5,408.0 L169.2,407.0 L167.8,408.6 L167.8,406.3 L166.6,402.9 L163.0,405.4 L162.9,401.3 L162.0,401.1 L160.0,402.4 L158.8,399.9 L155.3,400.5 L154.1,401.5 L153.5,403.9 L151.4,403.8 L151.1,400.7 L153.2,399.7 L153.3,398.2 L149.8,397.1 L148.5,395.8 L149.3,392.5 L134.1,395.2 L133.1,399.9 L134.3,403.2 L139.0,403.7 L143.2,406.3 L147.2,411.7 L148.8,415.7 L152.9,416.2 L158.6,420.6 L162.8,425.6 L167.7,437.5 L175.4,448.6 L176.9,449.5 L178.6,454.2 L180.2,455.8 L183.4,456.6 L191.8,466.6 L192.9,481.8 L198.7,488.2 L191.8,489.0 L189.3,494.4 L189.1,490.2 L186.0,488.4 L182.8,490.7 L180.3,494.2 L181.1,498.0 L180.4,501.2 L183.2,504.4 L184.4,508.4 L187.7,506.1 L190.3,514.8 L198.9,519.1 L204.1,520.5 L211.0,530.6 L239.7,543.7 Z', cx:230.2, cy:469.3, onRoute:true },
+  { name:'Pulau Pinang', d:'M76.8,187.0 L76.2,187.9 L78.2,189.2 L79.6,191.8 L81.3,199.2 L77.9,200.8 L73.3,200.9 L69.1,200.0 L68.6,199.1 L66.2,198.9 L64.6,200.5 L62.1,200.7 L60.5,200.7 L58.1,199.2 L57.0,199.3 L57.7,202.9 L57.3,204.6 L58.6,205.0 L58.1,208.1 L59.3,215.6 L59.2,219.4 L57.7,220.1 L56.9,222.6 L58.2,224.2 L59.1,222.6 L61.5,222.7 L63.1,222.0 L65.1,223.3 L67.0,223.3 L69.3,225.5 L86.9,229.9 L86.1,235.3 L86.9,235.9 L83.6,238.7 L82.6,240.9 L85.3,241.7 L94.7,240.7 L96.2,239.1 L100.8,239.9 L101.8,239.0 L98.6,213.3 L99.1,190.1 L98.8,190.4 L98.6,189.5 L96.7,189.5 L96.3,188.6 L94.1,188.5 L94.0,189.2 L90.1,188.4 L86.8,189.1 L81.9,186.6 L81.4,187.1 L80.4,186.5 L79.5,187.4 L76.8,187.0 Z', cx:78.9, cy:214.4, onRoute:true },
+  { name:'Perlis', d:'M59.1,106.2 L60.8,104.4 L60.7,101.3 L71.2,89.0 L74.6,85.2 L80.0,82.1 L80.3,76.2 L80.9,74.6 L77.8,68.4 L74.4,66.6 L73.3,64.3 L72.5,64.2 L72.2,63.5 L74.5,62.2 L73.7,59.9 L74.6,57.0 L72.3,56.6 L71.7,55.4 L71.0,55.4 L70.5,54.0 L70.9,52.2 L69.3,52.0 L67.4,53.0 L66.2,51.8 L64.2,53.9 L61.9,52.7 L61.2,50.5 L60.0,50.0 L58.1,51.0 L56.4,53.8 L57.2,58.4 L56.1,58.9 L55.6,61.3 L56.0,63.9 L57.4,65.0 L57.7,67.7 L56.8,68.8 L56.0,67.9 L55.4,68.5 L55.1,67.7 L54.4,67.9 L54.2,74.2 L54.8,78.1 L53.2,80.8 L53.3,82.6 L51.9,83.5 L51.5,85.4 L50.0,86.2 L50.6,88.5 L51.4,88.6 L50.9,89.1 L55.6,100.7 L57.4,104.7 L59.1,106.2 Z', cx:67.4, cy:77.2, onRoute:false },
+  { name:'Kedah', d:'M153.9,170.6 L151.1,167.3 L150.9,163.9 L154.8,163.2 L154.5,159.8 L156.8,156.7 L157.0,150.6 L159.1,149.1 L158.6,146.0 L166.2,147.3 L170.1,138.8 L168.2,135.2 L169.7,131.9 L171.0,124.4 L168.3,121.8 L162.9,119.7 L166.5,115.1 L170.1,114.8 L168.5,106.3 L158.1,107.4 L151.9,103.1 L149.1,107.7 L142.7,108.7 L140.4,104.9 L137.7,108.9 L136.4,104.1 L137.4,99.7 L136.4,96.9 L134.3,94.1 L134.6,90.9 L133.4,84.0 L129.0,81.7 L124.4,76.3 L114.5,84.0 L113.5,82.2 L103.2,77.5 L97.2,78.0 L95.4,74.4 L92.6,73.4 L87.0,73.5 L81.6,72.1 L80.1,82.8 L75.3,85.7 L61.7,101.4 L60.4,106.6 L67.4,115.3 L70.2,125.1 L73.7,128.5 L76.0,133.9 L78.8,144.2 L79.3,165.7 L76.0,175.7 L76.8,186.8 L79.6,186.9 L80.6,185.9 L86.9,188.6 L90.4,187.9 L94.1,188.6 L94.4,187.9 L96.4,188.1 L97.0,189.0 L98.7,189.0 L99.4,189.7 L98.9,213.3 L102.0,238.7 L101.3,239.6 L96.7,238.8 L95.3,240.0 L95.8,241.8 L97.0,240.9 L97.9,241.9 L97.4,244.1 L99.8,245.6 L100.5,244.8 L101.3,244.8 L101.8,246.5 L103.8,246.2 L104.0,245.3 L106.2,244.6 L105.9,243.5 L106.9,242.4 L106.6,241.6 L110.2,240.2 L111.3,236.4 L114.3,234.0 L114.9,234.2 L119.3,226.2 L122.6,224.6 L123.5,223.5 L124.3,218.3 L126.9,217.6 L129.9,218.2 L131.1,217.1 L132.1,217.7 L134.0,217.4 L133.9,216.6 L136.7,214.3 L138.9,210.3 L140.5,200.6 L143.0,195.7 L145.1,196.4 L146.9,195.5 L148.5,193.1 L149.4,185.3 L147.1,182.9 L147.6,180.8 L149.2,180.5 L150.3,178.4 L152.3,177.7 L153.9,170.6 Z', cx:117.4, cy:158.2, onRoute:true },
+  { name:'Kelantan', d:'M286.7,108.3 L286.7,119.8 L281.4,127.6 L269.9,136.8 L266.9,147.2 L269.6,154.5 L263.3,157.1 L255.4,164.3 L255.1,169.5 L245.5,162.3 L241.6,164.3 L238.6,168.2 L234.3,181.0 L237.6,186.2 L236.0,195.1 L241.2,195.1 L247.2,199.0 L243.9,201.0 L244.2,205.9 L245.9,212.8 L228.7,216.0 L218.2,224.9 L210.0,255.7 L209.3,270.5 L204.7,274.4 L203.1,284.9 L196.1,293.4 L200.8,300.0 L211.6,305.2 L218.5,302.6 L228.1,309.2 L235.3,304.6 L244.5,301.3 L247.2,295.1 L249.1,284.6 L254.7,287.8 L259.3,293.1 L262.6,302.0 L268.6,295.1 L269.6,284.9 L274.2,284.9 L280.1,286.9 L288.0,283.9 L291.6,289.5 L300.2,299.0 L305.8,296.0 L312.3,298.3 L318.6,293.4 L320.9,289.5 L327.8,289.8 L335.7,294.1 L340.7,290.8 L347.6,291.8 L348.2,281.6 L354.1,283.3 L353.5,279.0 L351.5,274.4 L345.6,271.8 L340.0,267.8 L336.7,264.2 L335.7,259.3 L336.4,252.4 L335.4,246.5 L338.0,242.3 L325.2,233.7 L324.9,229.5 L326.2,210.8 L322.5,208.2 L322.9,204.9 L321.2,195.4 L323.5,188.5 L321.6,176.1 L322.5,172.8 L327.5,166.2 L340.0,154.8 L332.8,146.6 L322.9,127.6 L315.3,115.8 L304.4,110.9 L292.6,111.2 L286.7,108.3 Z', cx:284.7, cy:209.5, onRoute:false },
+  { name:'Terengganu', d:'M341.0,155.4 L339.6,155.2 L328.8,165.1 L322.7,172.7 L322.1,176.0 L323.5,183.8 L323.8,189.3 L321.8,194.5 L323.1,204.0 L322.9,207.9 L323.4,207.7 L326.0,210.1 L326.5,211.4 L325.2,228.5 L326.0,233.9 L334.6,239.0 L338.5,240.6 L338.7,242.6 L336.2,246.5 L336.9,252.6 L336.0,259.3 L336.9,264.0 L339.3,266.8 L343.4,270.1 L351.1,273.9 L352.5,275.8 L354.6,282.8 L353.7,283.7 L356.2,289.0 L358.8,289.5 L362.2,292.6 L368.3,294.2 L374.6,293.8 L377.7,296.0 L380.8,301.1 L378.8,303.9 L379.8,305.1 L379.7,306.9 L375.5,309.3 L377.2,315.2 L380.5,318.5 L383.8,319.2 L392.0,318.0 L397.9,325.6 L396.0,331.3 L397.1,333.1 L391.0,336.6 L387.7,340.2 L384.9,348.4 L385.9,352.8 L384.9,355.8 L382.8,358.7 L385.9,362.0 L392.8,359.7 L401.7,360.7 L404.3,362.5 L408.3,363.7 L415.0,370.9 L420.0,369.6 L420.6,372.2 L423.8,372.4 L427.4,377.0 L427.6,380.7 L431.5,384.0 L434.6,382.9 L434.8,377.4 L433.6,369.4 L431.7,363.8 L434.0,357.4 L433.3,352.0 L436.3,351.7 L438.1,353.2 L443.8,352.3 L448.3,350.9 L446.1,348.6 L450.3,347.7 L454.4,337.6 L450.3,330.3 L449.3,323.8 L449.3,315.4 L452.1,312.3 L448.5,302.1 L447.8,297.5 L448.9,295.2 L446.1,283.9 L448.0,283.4 L445.2,277.4 L429.7,251.0 L424.4,237.5 L418.2,226.0 L415.4,219.5 L412.9,216.0 L412.9,214.9 L393.6,194.2 L389.2,192.0 L384.3,191.5 L360.7,174.8 L350.9,162.1 L341.0,155.4 Z', cx:390.7, cy:268.4, onRoute:false },
+  { name:'Perak', d:'M155.1,162.9 L151.0,164.0 L151.2,167.2 L153.9,170.7 L152.7,177.8 L150.3,178.6 L149.9,180.5 L147.7,181.1 L147.3,182.7 L149.7,185.3 L149.0,192.6 L147.1,195.7 L145.7,196.7 L143.2,196.3 L142.5,197.2 L140.9,200.6 L138.8,211.0 L136.1,215.4 L134.3,216.7 L134.2,217.6 L131.3,217.6 L129.9,218.5 L126.9,217.9 L124.4,218.4 L123.2,224.5 L119.4,226.6 L115.3,234.6 L111.4,236.6 L110.8,239.6 L108.4,241.5 L107.3,241.4 L106.4,243.5 L106.7,244.2 L104.2,245.7 L103.7,246.6 L101.8,247.1 L100.8,245.1 L100.0,245.8 L97.0,244.6 L97.4,242.1 L96.9,241.6 L95.9,242.2 L94.9,240.8 L86.1,242.1 L83.1,241.3 L80.3,243.9 L80.6,250.1 L90.2,266.5 L97.1,273.1 L101.0,273.4 L105.0,285.9 L106.0,291.8 L108.6,295.7 L111.6,296.4 L106.6,301.0 L106.3,308.5 L111.2,307.5 L111.6,311.8 L103.3,336.7 L99.7,344.6 L101.0,351.2 L107.9,353.8 L111.6,356.1 L118.5,357.4 L125.0,363.7 L128.0,377.1 L123.1,375.8 L118.1,380.1 L119.8,389.3 L126.4,393.2 L135.1,393.7 L142.3,393.0 L146.4,391.9 L149.6,392.1 L148.7,395.6 L149.9,396.7 L153.5,397.9 L153.4,399.7 L151.3,401.0 L151.4,403.6 L153.0,403.6 L154.8,400.4 L158.4,399.6 L159.9,401.8 L163.0,400.8 L163.1,404.6 L166.7,402.4 L168.0,407.9 L169.1,406.6 L170.1,407.2 L171.8,404.7 L173.3,407.2 L172.8,408.2 L173.8,408.4 L174.3,407.0 L175.2,408.1 L175.9,406.8 L176.9,408.8 L178.7,408.6 L178.9,409.2 L177.3,410.7 L179.2,410.0 L179.4,408.8 L181.7,410.9 L184.2,409.9 L185.8,410.1 L185.6,412.6 L186.4,415.5 L188.4,415.9 L191.2,414.9 L192.4,415.2 L194.2,413.8 L196.4,413.3 L197.1,411.4 L194.7,403.5 L194.9,401.8 L197.3,400.1 L200.2,399.6 L201.8,401.2 L202.5,403.1 L206.2,405.7 L208.2,405.5 L209.4,406.3 L211.7,410.0 L218.4,414.5 L225.2,409.4 L225.0,404.1 L229.7,403.6 L229.1,402.2 L225.9,401.3 L225.6,396.7 L227.3,392.1 L224.6,388.8 L224.0,377.9 L222.5,372.5 L224.6,367.3 L219.0,361.9 L217.4,363.3 L214.9,357.3 L215.9,352.3 L209.6,350.4 L211.1,347.2 L209.6,344.1 L209.2,339.4 L206.7,335.3 L208.0,330.8 L202.1,328.0 L199.6,330.0 L195.8,324.4 L198.8,317.9 L201.7,316.4 L201.2,314.3 L198.5,312.3 L197.5,307.9 L200.0,304.3 L200.4,299.9 L195.9,293.2 L203.0,284.2 L204.3,274.9 L209.1,270.4 L209.3,257.8 L217.8,224.8 L228.5,215.8 L245.6,212.6 L243.9,205.3 L243.7,201.1 L246.5,199.2 L246.3,198.6 L240.9,195.3 L235.5,195.2 L237.1,186.4 L234.2,181.4 L234.3,179.5 L238.4,167.6 L237.8,162.6 L236.6,162.2 L234.7,158.8 L235.4,152.9 L234.7,151.7 L232.6,152.1 L230.5,150.8 L229.5,147.3 L227.8,147.4 L225.9,145.0 L221.3,145.9 L217.5,148.0 L213.9,150.5 L213.8,151.8 L211.5,151.5 L210.5,152.6 L206.9,151.6 L202.9,151.6 L201.0,156.6 L197.5,157.4 L196.8,159.6 L194.9,159.1 L192.9,160.3 L191.5,159.2 L188.8,159.0 L185.7,165.3 L186.5,167.7 L186.4,171.6 L185.2,173.6 L182.4,174.2 L182.2,175.9 L179.5,178.4 L176.8,179.0 L176.2,180.5 L172.2,183.1 L169.6,176.1 L165.5,170.6 L163.7,169.6 L162.4,167.8 L160.0,168.1 L155.1,162.9 Z', cx:153.3, cy:279.5, onRoute:true },
+  { name:'Pahang', d:'M448.9,352.2 L446.1,352.0 L439.4,353.6 L437.6,353.4 L435.6,352.3 L434.0,352.6 L434.1,358.1 L432.3,364.1 L434.2,369.9 L435.3,381.3 L434.1,383.9 L431.8,384.8 L427.2,381.3 L427.1,378.1 L425.5,374.6 L423.7,373.1 L421.4,372.9 L419.3,370.6 L414.6,370.9 L408.0,363.9 L404.4,363.2 L401.0,361.0 L392.7,360.2 L385.3,362.3 L382.7,359.6 L382.7,357.9 L385.3,352.5 L384.5,348.4 L386.5,341.1 L390.9,335.2 L394.3,334.4 L395.7,332.3 L395.6,330.3 L397.4,326.2 L396.0,323.3 L392.1,319.1 L390.1,318.9 L383.1,320.2 L379.2,318.7 L376.4,314.8 L374.8,309.5 L379.1,305.8 L378.5,304.7 L379.7,300.2 L374.9,294.9 L367.1,294.5 L361.9,293.2 L357.9,290.1 L356.2,290.3 L353.2,283.7 L348.9,282.4 L348.2,288.0 L348.6,291.8 L340.0,291.9 L335.5,294.5 L327.8,290.4 L321.1,290.1 L319.2,293.5 L314.1,297.5 L313.4,298.8 L306.1,296.5 L300.2,299.5 L289.7,287.5 L287.9,284.4 L279.7,287.2 L273.9,285.4 L270.4,285.2 L268.9,295.3 L262.6,302.5 L259.3,293.4 L254.8,288.5 L249.5,285.2 L247.6,295.4 L244.4,301.7 L235.7,304.7 L227.9,309.7 L218.4,303.3 L211.0,305.4 L200.6,300.6 L200.4,304.7 L197.9,307.8 L198.9,311.9 L201.4,313.9 L202.0,316.6 L199.3,318.0 L196.6,324.5 L198.9,328.5 L199.9,328.6 L202.1,327.3 L207.5,329.7 L208.7,331.4 L207.3,334.9 L209.5,339.0 L210.2,344.4 L211.5,347.1 L210.1,350.4 L216.0,351.5 L215.6,357.2 L217.0,361.3 L218.2,362.1 L219.2,361.4 L225.0,367.0 L222.9,372.4 L224.2,376.6 L224.8,387.5 L227.7,391.8 L225.9,397.1 L226.2,400.8 L229.1,401.2 L235.0,408.4 L238.9,411.2 L244.5,410.9 L246.1,413.7 L248.0,414.7 L248.5,417.1 L250.1,418.4 L250.0,420.5 L251.3,421.0 L252.2,422.8 L254.0,424.3 L252.6,430.8 L250.2,431.1 L247.6,435.4 L250.1,444.0 L249.6,447.1 L247.9,448.7 L247.1,451.5 L249.1,452.8 L249.6,455.2 L251.4,456.0 L253.2,458.4 L258.1,462.5 L263.8,464.3 L265.3,464.3 L268.3,461.4 L270.5,463.4 L272.9,462.8 L273.9,466.9 L276.6,468.4 L280.8,468.8 L283.2,475.4 L287.5,473.0 L293.2,472.4 L295.4,474.8 L320.0,481.0 L322.4,482.3 L334.2,495.1 L351.0,506.1 L358.3,510.0 L359.5,516.1 L373.3,521.4 L392.0,544.1 L413.6,552.8 L436.1,544.9 L437.4,545.0 L446.6,548.6 L468.0,560.0 L471.2,557.7 L469.9,552.9 L466.9,551.5 L469.1,540.2 L469.4,535.8 L467.4,532.5 L454.2,519.4 L447.0,503.9 L448.9,474.0 L445.3,456.0 L447.6,444.1 L450.6,440.2 L452.2,435.3 L436.8,413.2 L434.1,405.0 L437.1,399.5 L440.7,397.2 L439.1,391.9 L441.0,383.7 L444.3,379.7 L447.0,381.7 L447.6,378.8 L443.0,371.5 L441.4,362.7 L444.0,361.4 L445.7,355.5 L448.6,355.8 L448.9,352.2 Z', cx:347.3, cy:421.9, onRoute:false },
+  { name:'Kuala Lumpur', d:'M235.6,467.3 L232.2,468.3 L232.3,469.6 L229.7,472.7 L229.4,477.8 L230.3,479.1 L233.5,481.1 L232.9,481.7 L234.7,482.7 L234.5,486.7 L233.1,487.5 L233.7,489.2 L234.8,489.2 L233.8,490.1 L234.0,490.6 L238.2,491.0 L241.4,489.8 L242.7,491.9 L243.4,491.6 L243.4,489.5 L245.5,489.4 L244.9,486.0 L246.0,484.7 L245.9,483.4 L244.3,482.7 L244.5,481.1 L243.8,479.8 L245.6,476.8 L244.1,476.5 L243.5,475.6 L244.2,474.9 L245.9,475.2 L246.5,472.5 L244.3,470.3 L244.7,468.8 L244.1,468.3 L243.1,468.4 L241.4,470.4 L239.8,470.1 L239.2,468.9 L236.2,468.7 L235.6,467.3 Z', cx:237.4, cy:479.5, onRoute:true },
+];
+
+const SPINE_POINTS = {
+  'Bukit Kayu Hitam': {lon:100.45, lat:6.5333},
+  'Dewan Wawasan': {lon:100.41, lat:6.3},
+  'Alor Setar': {lon:100.3672, lat:6.1211},
+  'Gurun': {lon:100.4667, lat:5.8167},
+  'Sungai Petani': {lon:100.4874, lat:5.6462},
+  'Sungai Dua': {lon:100.43, lat:5.37},
+  'Juru': {lon:100.4, lat:5.355},
+  'Jawi': {lon:100.494, lat:5.198},
+  'Bukit Merah': {lon:100.634, lat:5.033},
+  'Changkat Jering': {lon:100.684, lat:4.835},
+  'Kuala Kangsar': {lon:100.9333, lat:4.7667},
+  'Ipoh': {lon:101.0901, lat:4.5975},
+  'Simpang Pulai': {lon:101.1167, lat:4.5167},
+  'Tapah': {lon:101.265, lat:4.198},
+  'Bidor': {lon:101.264, lat:4.107},
+  'Slim River': {lon:101.4167, lat:3.8167},
+  'Tanjung Malim': {lon:101.5167, lat:3.6833},
+  'Rawang': {lon:101.5833, lat:3.3167},
+  'Sungai Buloh': {lon:101.5667, lat:3.2167},
+  'Bukit Lanjan': {lon:101.599, lat:3.1806},
+  'Sungai Besi': {lon:101.7076, lat:3.0733},
+  'Bangi': {lon:101.7833, lat:2.9167},
+  'Seremban': {lon:101.9381, lat:2.7297},
+  'Simpang Ampat': {lon:102.2167, lat:2.3833},
+  'Jasin': {lon:102.4333, lat:2.3},
+  'Pagoh': {lon:102.9333, lat:2.15},
+  'Yong Peng': {lon:103.0667, lat:2.0167},
+  'Machap': {lon:103.28, lat:1.85},
+  'Kulai': {lon:103.6, lat:1.6667},
+  'Skudai': {lon:103.6667, lat:1.5333},
+  'Kempas': {lon:103.6833, lat:1.5167},
+  'Pandan Johor': {lon:103.73, lat:1.49},
+  'Johor Causeway': {lon:103.7639, lat:1.4639},
+};
+const SPINE_ORDER = ['Bukit Kayu Hitam', 'Dewan Wawasan', 'Alor Setar', 'Gurun', 'Sungai Petani', 'Sungai Dua', 'Juru', 'Jawi', 'Bukit Merah', 'Changkat Jering', 'Kuala Kangsar', 'Ipoh', 'Simpang Pulai', 'Tapah', 'Bidor', 'Slim River', 'Tanjung Malim', 'Rawang', 'Sungai Buloh', 'Bukit Lanjan', 'Sungai Besi', 'Bangi', 'Seremban', 'Simpang Ampat', 'Jasin', 'Pagoh', 'Yong Peng', 'Machap', 'Kulai', 'Skudai', 'Kempas', 'Pandan Johor', 'Johor Causeway'];
+
+/* Authoritative KM chainage at each SPINE_ORDER waypoint, per the official CRO/NRO/SRO strip
+   maps — used by kmToLegXY() below to place interchanges/toll plazas/facilities precisely
+   along the corridor instead of relying on town-level lon/lat. Two independent chainage legs,
+   matching PLUS's own numbering: 'N' ascends Dewan Wawasan -> Bukit Lanjan; 'S' descends
+   Sungai Besi -> Johor Causeway. */
+const KM_ASC = [
+  {name:'Dewan Wawasan', km:24.30}, {name:'Alor Setar', km:46.68}, {name:'Gurun', km:83.05},
+  {name:'Sungai Petani', km:103.10}, {name:'Sungai Dua', km:129.60}, {name:'Juru', km:143.94},
+  {name:'Jawi', km:163.31}, {name:'Bukit Merah', km:193.80}, {name:'Changkat Jering', km:220.50},
+  {name:'Kuala Kangsar', km:241.43}, {name:'Ipoh', km:271.05}, {name:'Simpang Pulai', km:286.98},
+  {name:'Tapah', km:326.80}, {name:'Bidor', km:339.99}, {name:'Slim River', km:372.60},
+  {name:'Tanjung Malim', km:400.30}, {name:'Rawang', km:443.80}, {name:'Sungai Buloh', km:456.10},
+  {name:'Bukit Lanjan', km:459.32}
+];
+const KM_DESC = [
+  {name:'Sungai Besi', km:310.10}, {name:'Bangi', km:296.58}, {name:'Seremban', km:262.90},
+  {name:'Simpang Ampat', km:216.90}, {name:'Jasin', km:180.60}, {name:'Pagoh', km:142.30},
+  {name:'Yong Peng', km:99.32}, {name:'Machap', km:72.69}, {name:'Kulai', km:27.81},
+  {name:'Skudai', km:13.50}, {name:'Kempas', km:7.90}, {name:'Pandan Johor', km:1.30},
+  {name:'Johor Causeway', km:0.00}
+];
+
+/* Mainline interchanges & toll plazas (opt-in layer, off by default — see icToggle).
+   kind: 'ic' | 'toll' | 'ic+toll'. office: '' | 'section' | 'region+section'. */
+const INTERCHANGES = [
+  {km:26.70, leg:'N', name:'Jitra North', ic:'', kind:'ic', office:'', section:'N1N2'},
+  {km:30.10, leg:'N', name:'Jitra Toll Barrier', ic:'', kind:'toll', office:'', section:'N1N2'},
+  {km:31.80, leg:'N', name:'Jitra South (Darul Aman)', ic:'', kind:'ic', office:'', section:'N1N2'},
+  {km:35.80, leg:'N', name:'Kepala Batas', ic:'', kind:'ic', office:'section', section:'N1N2'},
+  {km:40.90, leg:'N', name:'Hutan Kampung', ic:'', kind:'toll', office:'', section:'N1N2'},
+  {km:43.60, leg:'N', name:'Alor Setar North', ic:'', kind:'ic+toll', office:'', section:'N1N2'},
+  {km:49.75, leg:'N', name:'Alor Setar South', ic:'', kind:'ic+toll', office:'', section:'N1N2'},
+  {km:63.40, leg:'N', name:'Pendang', ic:'', kind:'ic+toll', office:'', section:'N1N2'},
+  {km:83.05, leg:'N', name:'Gurun', ic:'', kind:'ic+toll', office:'section', section:'N1N2'},
+  {km:99.17, leg:'N', name:'Sg. Petani North', ic:'', kind:'ic+toll', office:'', section:'N1N2'},
+  {km:107.02, leg:'N', name:'Sg. Petani South', ic:'', kind:'ic+toll', office:'', section:'N1N2'},
+  {km:120.20, leg:'N', name:'Bertam', ic:'', kind:'ic+toll', office:'region+section', section:'N3'},
+  {km:128.40, leg:'N', name:'Sg. Dua Toll Barrier', ic:'', kind:'toll', office:'', section:'N3'},
+  {km:129.60, leg:'N', name:'Sungai Dua', ic:'', kind:'ic', office:'', section:'N3'},
+  {km:133.87, leg:'N', name:'Permatang Pauh', ic:'', kind:'ic', office:'', section:'N3'},
+  {km:135.35, leg:'N', name:'East-West (Seberang Jaya)', ic:'', kind:'ic', office:'', section:'N3'},
+  {km:137.65, leg:'N', name:'Perai (Penang Bridge)', ic:'', kind:'ic', office:'', section:'N3'},
+  {km:139.20, leg:'N', name:'Jambatan P.Pinang (Penang Bridge)', ic:'', kind:'ic', office:'', section:'N3'},
+  {km:143.94, leg:'N', name:'Juru North', ic:'', kind:'ic', office:'', section:'N3'},
+  {km:145.72, leg:'N', name:'Juru Toll Barrier', ic:'', kind:'toll', office:'', section:'N3'},
+  {km:151.61, leg:'N', name:'Bukit Tambun (BTU/BTS)', ic:'', kind:'ic+toll', office:'', section:'N3'},
+  {km:154.60, leg:'N', name:'Bandar Cassia', ic:'', kind:'ic+toll', office:'', section:'N3'},
+  {km:163.31, leg:'N', name:'Jawi', ic:'', kind:'ic+toll', office:'', section:'N4'},
+  {km:175.46, leg:'N', name:'Bandar Baru', ic:'', kind:'ic+toll', office:'', section:'N4'},
+  {km:181.40, leg:'N', name:'Alor Pongsu', ic:'', kind:'ic+toll', office:'', section:'N4'},
+  {km:193.80, leg:'N', name:'Bukit Merah', ic:'', kind:'ic+toll', office:'', section:'N4'},
+  {km:205.60, leg:'N', name:'Taiping North', ic:'', kind:'ic+toll', office:'section', section:'N4'},
+  {km:220.50, leg:'N', name:'Changkat Jering', ic:'', kind:'ic+toll', office:'', section:'N5'},
+  {km:241.43, leg:'N', name:'Kuala Kangsar', ic:'', kind:'ic+toll', office:'section', section:'N5'},
+  {km:267.02, leg:'N', name:'Jelapang', ic:'', kind:'ic+toll', office:'', section:'N5'},
+  {km:268.00, leg:'N', name:'Ipoh North TP (SB/NB)', ic:'', kind:'toll', office:'', section:'N5'},
+  {km:271.05, leg:'N', name:'Ipoh North', ic:'', kind:'ic', office:'', section:'N5'},
+  {km:280.30, leg:'N', name:'Ipoh South TP (SB/NB)', ic:'', kind:'toll', office:'', section:'C1'},
+  {km:286.98, leg:'N', name:'Simpang Pulai', ic:'212', kind:'ic', office:'', section:'C1'},
+  {km:296.55, leg:'N', name:'Gopeng', ic:'213', kind:'ic', office:'', section:'C1'},
+  {km:326.80, leg:'N', name:'Tapah', ic:'216', kind:'ic', office:'section', section:'C1'},
+  {km:339.99, leg:'N', name:'Bidor', ic:'221', kind:'ic', office:'', section:'C2'},
+  {km:353.53, leg:'N', name:'Sungkai', ic:'222', kind:'ic', office:'', section:'C2'},
+  {km:372.60, leg:'N', name:'Slim River', ic:'224', kind:'ic', office:'section', section:'C2'},
+  {km:387.98, leg:'N', name:'Behrang', ic:'226', kind:'ic', office:'', section:'C2'},
+  {km:400.30, leg:'N', name:'Tanjung Malim', ic:'231', kind:'ic', office:'', section:'C2'},
+  {km:409.90, leg:'N', name:'Lembah Beringin', ic:'232', kind:'ic+toll', office:'', section:'C3'},
+  {km:419.60, leg:'N', name:'Bukit Tagar', ic:'', kind:'ic', office:'', section:'C3'},
+  {km:428.40, leg:'N', name:'Bukit Beruntung', ic:'233', kind:'ic+toll', office:'', section:'C3'},
+  {km:434.70, leg:'N', name:'Sungai Buaya', ic:'', kind:'ic', office:'', section:'C3'},
+  {km:443.80, leg:'N', name:'Rawang', ic:'234', kind:'ic', office:'section', section:'C3'},
+  {km:446.30, leg:'N', name:'Rawang South', ic:'236', kind:'ic', office:'', section:'C3'},
+  {km:453.80, leg:'N', name:'Sg. Buloh Hospital', ic:'', kind:'ic', office:'', section:'C3'},
+  {km:456.10, leg:'N', name:'Sungai Buloh', ic:'235', kind:'ic', office:'', section:'C3'},
+  {km:310.10, leg:'S', name:'Sg. Besi Toll Barrier', ic:'251', kind:'toll', office:'', section:'C5'},
+  {km:304.70, leg:'S', name:'Univ Putra', ic:'252', kind:'ic', office:'', section:'C5'},
+  {km:302.80, leg:'S', name:'Kajang', ic:'253', kind:'ic', office:'', section:'C5'},
+  {km:296.58, leg:'S', name:'Bangi', ic:'254', kind:'ic', office:'section', section:'C5'},
+  {km:294.15, leg:'S', name:'Southville City', ic:'259', kind:'ic', office:'', section:'C5'},
+  {km:289.00, leg:'S', name:'Putera Mahkota', ic:'255', kind:'ic', office:'', section:'C5'},
+  {km:283.80, leg:'S', name:'Nilai', ic:'257', kind:'ic', office:'', section:'C5'},
+  {km:267.80, leg:'S', name:'Bandar Ainsdale', ic:'258', kind:'ic', office:'', section:'C5'},
+  {km:262.90, leg:'S', name:'Seremban', ic:'311', kind:'ic+toll', office:'', section:'S1'},
+  {km:259.40, leg:'S', name:'P.Dickson (PDU-312 / PDS-313)', ic:'312/313', kind:'ic+toll', office:'', section:'S1'},
+  {km:256.15, leg:'S', name:'Senawang', ic:'314', kind:'ic+toll', office:'', section:'S1'},
+  {km:239.70, leg:'S', name:'Pedas Linggi', ic:'315', kind:'ic+toll', office:'section', section:'S1'},
+  {km:216.90, leg:'S', name:'Simpang Ampat', ic:'321', kind:'ic+toll', office:'', section:'S2'},
+  {km:195.40, leg:'S', name:'Air Keroh', ic:'322', kind:'ic+toll', office:'', section:'S2'},
+  {km:180.60, leg:'S', name:'Jasin', ic:'324', kind:'ic+toll', office:'', section:'S2'},
+  {km:169.20, leg:'S', name:'Tangkak', ic:'323', kind:'ic+toll', office:'section', section:'S2'},
+  {km:157.10, leg:'S', name:'Bukit Gambir', ic:'', kind:'ic+toll', office:'', section:'S2'},
+  {km:142.30, leg:'S', name:'Pagoh', ic:'325', kind:'ic+toll', office:'', section:'S3'},
+  {km:99.32, leg:'S', name:'Yong Peng (N)', ic:'333', kind:'ic+toll', office:'region+section', section:'S3'},
+  {km:94.55, leg:'S', name:'Yong Peng (S)', ic:'334', kind:'ic+toll', office:'', section:'S3'},
+  {km:80.22, leg:'S', name:'Air Hitam', ic:'336', kind:'ic+toll', office:'', section:'S3'},
+  {km:72.69, leg:'S', name:'Machap', ic:'337', kind:'ic+toll', office:'', section:'S4'},
+  {km:58.78, leg:'S', name:'Simpang Renggam', ic:'341', kind:'ic+toll', office:'', section:'S4'},
+  {km:41.35, leg:'S', name:'Sedenak', ic:'343', kind:'ic+toll', office:'section', section:'S4'},
+  {km:27.81, leg:'S', name:'Kulaijaya', ic:'344', kind:'ic+toll', office:'', section:'S4'},
+  {km:19.25, leg:'S', name:'Senai Utara', ic:'347', kind:'ic+toll', office:'', section:'S4'},
+  {km:14.80, leg:'S', name:'Skudai Toll Barrier', ic:'346', kind:'ic+toll', office:'', section:'S5'},
+  {km:13.50, leg:'S', name:'Skudai', ic:'', kind:'ic', office:'', section:'S5'},
+  {km:10.90, leg:'S', name:'Bukit Amber', ic:'', kind:'ic', office:'', section:'S5'},
+  {km:7.90, leg:'S', name:'Kempas Toll Barrier', ic:'352', kind:'ic+toll', office:'', section:'S5'},
+  {km:6.70, leg:'S', name:'Kempas', ic:'', kind:'ic', office:'', section:'S5'},
+  {km:5.80, leg:'S', name:'Setia Tropika', ic:'', kind:'ic', office:'', section:'S5'},
+  {km:5.10, leg:'S', name:'Desa Palma', ic:'', kind:'ic', office:'', section:'S5'},
+  {km:3.50, leg:'S', name:'Bandar Dato Onn', ic:'', kind:'ic', office:'', section:'S5'},
+  {km:1.30, leg:'S', name:'Pasir Gudang', ic:'', kind:'ic', office:'', section:'S5'},
+  {km:0.00, leg:'S', name:'Pandan (Johor Bahru)', ic:'', kind:'ic', office:'', section:'S5'}
+];
+
+/* Facility -> coarse Latest-alignment segment id, for the RSA/Layby table grouping */
+const SECTION_TO_SEG = {
+  'N1N2':'north1', 'N3':'north2', 'N4':'north3', 'N5':'north3',
+  'C1':'central1', 'C2':'central1', 'C3':'central2', 'C5':'central3',
+  'S1':'south1', 'S2':'south2', 'S3':'south2', 'S4':'south3', 'S5':'south3', 'C6':'central4'
+};
+
+const SPURS = [
+  {name:'BKE (Butterworth–Kulim)', lon:100.463, lat:5.3823, note:'N7 · Butterworth – Kulim, BKE · 16.78 km (KM21.78–KM5.00)'},
+  {name:'Penang Bridge', lon:100.33, lat:5.36, note:'N6 · Penang Bridge · 13.5 km (39.21 km incl. island & interchanges)'},
+  {name:'NKVE / Damansara Link', lon:101.4667, lat:3.05, note:'C4 · NKVE Jalan Duta–Bukit Raja · 32.55 km (KM31.3–KM-1.25) + Damansara Link Road 1.43 km'},
+  {name:'ELITE (C6 loop)', lon:101.75, lat:2.8, note:'C6 · ELITE Shah Alam IC–Bandar Serenia · 46.3 km (KM0.3–KM46.6); Usj–Nilai · 16.7 km · Office at Seafield'},
+  {name:'SPDH (Mambau–Sua Betong)', lon:101.87, lat:2.58, note:'S1 · Mambau – Sua Betong, SPDH · 22.7 km (KM6.8–KM29.5)'},
+  {name:'LINKEDUA (Second Link)', lon:103.5311, lat:1.3597, note:'S6 · LINKEDUA Second Link · 48.46–48.50 km (KM35.44–KM-1.76)'},
+];
+
+/* Section (and region+section) offices, corrected and expanded against the official CRO/NRO/SRO
+   strip maps: KM24.3 confirmed each interchange the source flags as an office location. Two
+   entries fix errors carried from the previous cut of this map — 'Permatang Pauh' (an
+   interchange only, N3) is replaced by 'Bertam' (KM120.2, the confirmed N3 / Northern Region
+   office), and 'Perling' (not present anywhere in the source) is replaced by 'Sedenak'
+   (KM41.35, the confirmed S4 office). Most entries plot by mainline KM chainage (leg+km); the
+   one off-spine office (Seafield, on the ELITE loop) still plots by lon/lat like a spur. */
+const OFFICES = [
+  {name:'Kepala Batas', km:35.80, leg:'N', region:'Northern', section:'N1N2', regionOffice:false},
+  {name:'Gurun', km:83.05, leg:'N', region:'Northern', section:'N1N2', regionOffice:false},
+  {name:'Bertam', km:120.20, leg:'N', region:'Northern', section:'N3', regionOffice:true},
+  {name:'Taiping North', km:205.60, leg:'N', region:'Northern', section:'N4', regionOffice:false},
+  {name:'Kuala Kangsar', km:241.43, leg:'N', region:'Northern', section:'N5', regionOffice:false},
+  {name:'Tapah', km:326.80, leg:'N', region:'Central', section:'C1', regionOffice:false},
+  {name:'Slim River', km:372.60, leg:'N', region:'Central', section:'C2', regionOffice:false},
+  {name:'Rawang', km:443.80, leg:'N', region:'Central', section:'C3', regionOffice:false},
+  {name:'Seafield', lon:101.5833, lat:3.0667, region:'Central', section:'C6 (ELITE)', regionOffice:true},
+  {name:'Bangi', km:296.58, leg:'S', region:'Central', section:'C5', regionOffice:false},
+  {name:'Pedas Linggi', km:239.70, leg:'S', region:'Southern', section:'S1', regionOffice:false},
+  {name:'Tangkak', km:169.20, leg:'S', region:'Southern', section:'S2', regionOffice:false},
+  {name:'Yong Peng (N)', km:99.32, leg:'S', region:'Southern', section:'S3', regionOffice:true},
+  {name:'Sedenak', km:41.35, leg:'S', region:'Southern', section:'S4', regionOffice:false},
+];
+
+const SEGMENTS_LATEST = [
+  { id:'north1', region:'Northern', section:'N1N2', fromP:'Dewan Wawasan', toP:'Sungai Dua', kmStart:24.3, kmEnd:129.2, totalKm:'104.9', office:'Gurun', desc:'Dewan Wawasan – Sungai Dua, NSE', extra:['Kepala Batas (KM 35.8) is also a confirmed section office within N1N2, per the strip maps — not yet split out in the audit schedule.'] },
+  { id:'north2', region:'Northern', section:'N3N6N7', fromP:'Sungai Dua', toP:'Bukit Merah', kmStart:129.2, kmEnd:193.2, totalKm:'120', office:'Bertam', desc:'Sungai Dua – Bukit Merah, NSE (64 km)', extra:['Correction: the strip maps confirm Bertam (KM 120.2) as the N3 / Northern Region office — "Permatang Pauh" (used previously) is only an interchange, not an office.', 'N7: Butterworth – Kulim, BKE · 16.78 km (KM21.78–KM5.00)', 'N6: Penang Bridge · 13.5 km (39.21 km incl. island & IC)'] },
+  { id:'north3', region:'Northern', section:'N4N5', fromP:'Bukit Merah', toP:'Simpang Pulai', kmStart:193.2, kmEnd:286.7, totalKm:'93.5', office:'Kuala Kangsar', desc:'Bukit Merah – Simpang Pulai, NSE', extra:['Taiping North (KM 205.6) is also a confirmed section office within N4 — not yet split out in the audit schedule.'] },
+  { id:'central1', region:'Central', section:'C1C2', fromP:'Simpang Pulai', toP:'Tanjung Malim', kmStart:286.7, kmEnd:401.1, totalKm:'114.4', office:'Tapah', desc:'Simpang Pulai IC – Tg. Malim IC, NSE', extra:['Slim River (KM 372.6) is also a confirmed section office within C2 — not yet split out in the audit schedule.'] },
+  { id:'central2', region:'Central', section:'C3C4', fromP:'Tanjung Malim', toP:'Bukit Lanjan', kmStart:401.1, kmEnd:459.3, totalKm:'92.1', office:'Rawang', desc:'C3: Tg. Malim IC – Sg. Buloh, NSE (55.7 km) · C4: Sg. Buloh – Bukit Lanjan, NSE (2.4 km)', extra:['C4: Jalan Duta – Bukit Raja, NKVE · 32.55 km (KM31.3–KM-1.25)', 'Damansara Link Road · 1.43 km'] },
+  { id:'central3', region:'Central', section:'C5', fromP:'Bukit Lanjan', toP:'Seremban', kmStart:310.8, kmEnd:263.5, totalKm:'47.3', office:'Bangi', desc:'Tg. Malim IC – Sg. Buloh, NSE (label as printed in source — flagged for verification)', extra:[] },
+  { id:'south1', region:'Southern', section:'S1', fromP:'Seremban', toP:'Jasin', kmStart:263.5, kmEnd:180.6, totalKm:'105.6–107.2', office:'Pedas Linggi', desc:'Seremban – Jasin, NSE (82.9 km)', extra:['Mambau – Sua Betong, SPDH · 22.7 km (KM6.8–KM29.5)'] },
+  { id:'south2', region:'Southern', section:'S2S3', fromP:'Jasin', toP:'Machap', kmStart:180.6, kmEnd:72.0, totalKm:'107.0–108.6', office:'Yong Peng', desc:'Jasin – Machap, NSE', extra:['Tangkak (KM 169.2) is the confirmed S2 section office; Yong Peng (N) (KM 99.32, this segment’s listed office) is also the Southern Region office — neither split is reflected in the audit schedule yet.'] },
+  { id:'south3', region:'Southern', section:'S4S5S6', fromP:'Machap', toP:'Kempas', kmStart:72.0, kmEnd:13.5, totalKm:'121.7', office:'Sedenak', desc:'Machap – Kempas JB, NSE (72 km)', extra:['Correction: the strip maps confirm Sedenak (KM 41.35) as the S4 office — "Perling" (used previously) does not appear anywhere in the source.', 'Johor Causeway · 1.20 km', 'S6: LINKEDUA · 48.46 km'] },
+];
+const SEGMENTS_LATEST_OFFSPINE = [
+  { id:'central4', region:'Central', section:'C6', offspine:true, anchor:'ELITE (C6 loop)', kmStart:0.3, kmEnd:46.6, totalKm:'63.0', office:'Seafield', desc:'Shah Alam IC – Bandar Serenia, ELITE (46.3 km)', extra:['Seafield is also confirmed as the Central Region office.', 'Usj, ELITE – Nilai, NSE · 16.7 km (figures as printed in source)'] },
+];
+
+const SEGMENTS_PREVIOUS = [
+  { id:'pn1', region:'Northern', section:'N1', fromP:'Dewan Wawasan', toP:'Alor Setar', kmStart:24.3, kmEnd:51.4, totalKm:'27.1', desc:'Dewan Wawasan – Alor Setar', extra:[] },
+  { id:'pn2', region:'Northern', section:'N2', fromP:'Alor Setar', toP:'Sungai Petani', kmStart:51.4, kmEnd:107.9, totalKm:'56.5', desc:'Alor Setar – Sungai Petani', extra:[] },
+  { id:'pn3', region:'Northern', section:'N3', fromP:'Sungai Petani', toP:'Jawi', kmStart:107.9, kmEnd:162.8, totalKm:'54.9', desc:'Sungai Petani – Jawi', extra:[] },
+  { id:'pn4', region:'Northern', section:'N4', fromP:'Jawi', toP:'Changkat Jering', kmStart:162.8, kmEnd:219.6, totalKm:'56.8', desc:'Jawi – Changkat Jering', extra:[] },
+  { id:'pn5', region:'Northern', section:'N5', fromP:'Changkat Jering', toP:'Ipoh', kmStart:219.6, kmEnd:275.0, totalKm:'55.4', desc:'Changkat Jering – Ipoh (endpoint inferred; description left blank in source)', extra:[] },
+  { id:'pn6', region:'Northern', section:'N6', offspine:true, anchor:'Penang Bridge', kmStart:275.0, kmEnd:21.78, totalKm:'—', desc:'KM275.00–KM21.78 (as printed; appears to reference the BKE/Penang Bridge numbering — not a mainline distance)', extra:[] },
+  { id:'pc1', region:'Central', section:'C1', fromP:'Ipoh', toP:'Tapah', kmStart:275.0, kmEnd:339.3, totalKm:'64.3', desc:'Ipoh – Tapah, NSE', extra:[] },
+  { id:'pc2', region:'Central', section:'C2', fromP:'Tapah', toP:'Tanjung Malim', kmStart:339.3, kmEnd:401.1, totalKm:'61.8', desc:'Tapah – Tg. Malim, NSE', extra:[] },
+  { id:'pc3', region:'Central', section:'C3', fromP:'Tanjung Malim', toP:'Bukit Lanjan', kmStart:401.1, kmEnd:459.3, totalKm:'58.2', desc:'Tg. Malim – Sg. Buloh, NSE', extra:[] },
+  { id:'pc4', region:'Central', section:'C4', offspine:true, anchor:'NKVE / Damansara Link', kmStart:459.3, kmEnd:310.8, totalKm:'32.45', desc:'Sg. Buloh – Bukit Raja, NSE', extra:['NKVE · KM31.2–KM-1.25'] },
+  { id:'pc5', region:'Central', section:'C5', fromP:'Bukit Lanjan', toP:'Seremban', kmStart:310.1, kmEnd:263.5, totalKm:'47.3', desc:'Sg. Besi – Bandar Ainsdale, NSE', extra:[] },
+  { id:'pc6', region:'Central', section:'C6', offspine:true, anchor:'ELITE (C6 loop)', kmStart:0.3, kmEnd:46.6, totalKm:'63.0', desc:'ELITE (figures as printed; range and total do not reconcile in source)', extra:[] },
+  { id:'ps1', region:'Southern', section:'S1', fromP:'Seremban', toP:'Simpang Ampat', kmStart:263.5, kmEnd:217.3, totalKm:'46.2', desc:'Seremban – Simpang Ampat, NSE', extra:['Mambau – Sua Betong, SPDH · 22.7 km (KM6.8–KM29.5)'] },
+  { id:'ps2', region:'Southern', section:'S2', fromP:'Simpang Ampat', toP:'Pagoh', kmStart:217.3, kmEnd:142.7, totalKm:'74.6', desc:'Simpang Ampat – Pagoh, NSE', extra:[] },
+  { id:'ps3', region:'Southern', section:'S3', fromP:'Pagoh', toP:'Machap', kmStart:142.7, kmEnd:72.0, totalKm:'70.7', desc:'Pagoh – Machap, NSE', extra:[] },
+  { id:'ps4', region:'Southern', section:'S4', fromP:'Machap', toP:'Skudai', kmStart:72.0, kmEnd:14.3, totalKm:'57.7', desc:'Machap – Skudai, NSE', extra:[] },
+  { id:'ps5', region:'Southern', section:'S5S6', fromP:'Skudai', toP:'Pandan Johor', kmStart:14.3, kmEnd:0.0, totalKm:'62.4', desc:'Skudai – Pandan Johor, NSE (14.4 km)', extra:['LINKEDUA · 48.46–48.50 km (KM35.44–KM-1.76)', 'Johor Causeway · 1.20 km'] },
+];
+
+/* RSA / Layby / OBR / Vista Point / Tunnel, with authoritative KM chainage from the official
+   CRO/NRO/SRO strip maps (replaces the earlier town-level lon/lat approximations — each
+   direction is its own record since NB and SB facilities are frequently at different KM). */
+const FACILITIES2 = [
+  {km:30.50, leg:'N', name:'Kepala Batas', type:'Layby', dir:'NB', section:'N1N2'},
+  {km:38.80, leg:'N', name:'Kepala Batas', type:'Layby', dir:'SB', section:'N1N2'},
+  {km:65.00, leg:'N', name:"Bukit Ko'bah", type:'Layby', dir:'SB', section:'N1N2'},
+  {km:81.10, leg:'N', name:'Gurun', type:'R&R', dir:'NB', section:'N1N2'},
+  {km:80.60, leg:'N', name:'Gurun', type:'R&R', dir:'SB', section:'N1N2'},
+  {km:113.50, leg:'N', name:'Tikam Batu', type:'Layby', dir:'SB', section:'N1N2'},
+  {km:116.00, leg:'N', name:'Sungai Muda', type:'Layby', dir:'NB', section:'N1N2'},
+  {km:141.60, leg:'N', name:'Sungai Juru', type:'Layby', dir:'NB', section:'N3'},
+  {km:141.80, leg:'N', name:'Sungai Juru', type:'Layby', dir:'SB', section:'N3'},
+  {km:158.00, leg:'N', name:'Sungai Bakap', type:'Layby', dir:'SB', section:'N3'},
+  {km:158.20, leg:'N', name:'Sungai Bakap', type:'Layby', dir:'NB', section:'N3'},
+  {km:179.60, leg:'N', name:'Alor Pongsu', type:'Layby', dir:'SB', section:'N4'},
+  {km:179.90, leg:'N', name:'Alor Pongsu', type:'Layby', dir:'NB', section:'N4'},
+  {km:194.60, leg:'N', name:'Gunung Semanggul', type:'R&R', dir:'SB', section:'N4'},
+  {km:196.00, leg:'N', name:'Gunung Semanggul', type:'R&R', dir:'NB', section:'N4'},
+  {km:212.60, leg:'N', name:'Taiping', type:'Layby', dir:'SB', section:'N4'},
+  {km:213.00, leg:'N', name:'Taiping', type:'Layby', dir:'NB', section:'N4'},
+  {km:225.00, leg:'N', name:'Bukit Gantang', type:'Layby', dir:'SB', section:'N5'},
+  {km:225.40, leg:'N', name:'Bukit Gantang', type:'Layby', dir:'NB', section:'N5'},
+  {km:249.30, leg:'N', name:'Sungai Perak', type:'R&R', dir:'NB', section:'N5'},
+  {km:249.30, leg:'N', name:'Sungai Perak', type:'R&R', dir:'SB', section:'N5'},
+  {km:260.80, leg:'N', name:'Menora Tunnel', type:'Tunnel', dir:'', section:'N5'},
+  {km:263.10, leg:'N', name:'Vista Point', type:'Vista Point', dir:'NB', section:'N5'},
+  {km:290.40, leg:'N', name:'Simpang Pulai', type:'Layby', dir:'NB', section:'C1'},
+  {km:290.40, leg:'N', name:'Simpang Pulai', type:'Layby', dir:'SB', section:'C1'},
+  {km:301.40, leg:'N', name:'Gunung Tempurung', type:'Layby', dir:'SB', section:'C1'},
+  {km:331.20, leg:'N', name:'Tapah', type:'R&R', dir:'SB', section:'C1'},
+  {km:332.30, leg:'N', name:'Tapah', type:'R&R', dir:'NB', section:'C1'},
+  {km:347.40, leg:'N', name:'Ladang Bikam', type:'Layby', dir:'SB', section:'C2'},
+  {km:347.40, leg:'N', name:'Ladang Bikam', type:'Layby', dir:'NB', section:'C2'},
+  {km:382.80, leg:'N', name:'Behrang', type:'Layby', dir:'SB', section:'C2'},
+  {km:383.20, leg:'N', name:'Behrang', type:'Layby', dir:'NB', section:'C2'},
+  {km:396.40, leg:'N', name:'Tanjung Malim', type:'Layby', dir:'NB', section:'C2'},
+  {km:398.80, leg:'N', name:'Ulu Bernam', type:'R&R', dir:'SB', section:'C2'},
+  {km:436.40, leg:'N', name:'Rawang', type:'Layby', dir:'SB', section:'C3'},
+  {km:440.00, leg:'N', name:'Rawang', type:'R&R', dir:'NB', section:'C3'},
+  {km:454.00, leg:'N', name:'Sungai Buloh', type:'Layby', dir:'SB', section:'C3'},
+  {km:458.40, leg:'N', name:'O/H Restaurant', type:'OBR', dir:'NB', section:'C3'},
+  {km:458.40, leg:'N', name:'O/H Restaurant', type:'OBR', dir:'SB', section:'C3'},
+  {km:308.20, leg:'S', name:'Serdang', type:'Layby', dir:'SB', section:'C5'},
+  {km:306.20, leg:'S', name:'Serdang', type:'Layby', dir:'NB', section:'C5'},
+  {km:287.00, leg:'S', name:'Nilai', type:'Layby', dir:'NB', section:'C5'},
+  {km:286.50, leg:'S', name:'Nilai', type:'Layby', dir:'SB', section:'C5'},
+  {km:274.40, leg:'S', name:'Seremban', type:'R&R', dir:'SB', section:'C5'},
+  {km:272.20, leg:'S', name:'Seremban', type:'R&R', dir:'NB', section:'C5'},
+  {km:249.90, leg:'S', name:'Senawang', type:'Layby', dir:'SB', section:'S1'},
+  {km:248.40, leg:'S', name:'Senawang', type:'Layby', dir:'NB', section:'S1'},
+  {km:237.70, leg:'S', name:'Vista Point', type:'Vista Point', dir:'SB', section:'S1'},
+  {km:230.30, leg:'S', name:'Pedas Linggi', type:'Layby', dir:'SB', section:'S1'},
+  {km:225.50, leg:'S', name:'Pedas Linggi', type:'Layby', dir:'NB', section:'S1'},
+  {km:224.30, leg:'S', name:'Vista Point', type:'Vista Point', dir:'NB', section:'S1'},
+  {km:210.30, leg:'S', name:'O/H Restaurant', type:'OBR', dir:'NB', section:'S2'},
+  {km:210.30, leg:'S', name:'O/H Restaurant', type:'OBR', dir:'SB', section:'S2'},
+  {km:209.90, leg:'S', name:'Ayer Keroh', type:'R&R', dir:'SB', section:'S2'},
+  {km:205.00, leg:'S', name:'Ayer Keroh', type:'R&R', dir:'NB', section:'S2'},
+  {km:185.30, leg:'S', name:'Kampung Bemban', type:'Layby', dir:'NB', section:'S2'},
+  {km:184.30, leg:'S', name:'Kampung Bemban', type:'Layby', dir:'SB', section:'S2'},
+  {km:165.00, leg:'S', name:'Tangkak', type:'Layby', dir:'SB', section:'S2'},
+  {km:161.60, leg:'S', name:'Tangkak', type:'Layby', dir:'NB', section:'S2'},
+  {km:146.60, leg:'S', name:'Pagoh', type:'R&R', dir:'NB', section:'S2'},
+  {km:135.20, leg:'S', name:'Pagoh', type:'R&R', dir:'SB', section:'S3'},
+  {km:108.80, leg:'S', name:'Yong Peng', type:'Layby', dir:'NB', section:'S3'},
+  {km:105.30, leg:'S', name:'Yong Peng', type:'Layby', dir:'SB', section:'S3'},
+  {km:74.60, leg:'S', name:'Machap', type:'R&R', dir:'NB', section:'S3'},
+  {km:74.70, leg:'S', name:'Machap', type:'R&R', dir:'SB', section:'S3'},
+  {km:54.30, leg:'S', name:'Simpang Renggam', type:'Layby', dir:'SB', section:'S4'},
+  {km:54.20, leg:'S', name:'Simpang Renggam', type:'Layby', dir:'NB', section:'S4'},
+  {km:33.20, leg:'S', name:'Kulai', type:'Layby', dir:'SB', section:'S4'},
+  {km:33.10, leg:'S', name:'Kulai', type:'Layby', dir:'NB', section:'S4'}
+];
+
+  // One color per region (matches the legend dots exactly) instead of a shade-per-section
+  // gradient - fewer simultaneous hues on the map reads far cleaner than 14+ near-duplicate
+  // ambers/teals/violets that don't map to anything the viewer needs to tell apart by color.
+  var REGION_COLORS = { Northern:'#f5a623', Central:'#22b8e0', Southern:'#c084fc' };
+  var COLORS = {
+    north1:REGION_COLORS.Northern, north2:REGION_COLORS.Northern, north3:REGION_COLORS.Northern,
+    central1:REGION_COLORS.Central, central2:REGION_COLORS.Central, central3:REGION_COLORS.Central, central4:REGION_COLORS.Central,
+    south1:REGION_COLORS.Southern, south2:REGION_COLORS.Southern, south3:REGION_COLORS.Southern,
+    pn1:REGION_COLORS.Northern, pn2:REGION_COLORS.Northern, pn3:REGION_COLORS.Northern, pn4:REGION_COLORS.Northern, pn5:REGION_COLORS.Northern, pn6:REGION_COLORS.Northern,
+    pc1:REGION_COLORS.Central, pc2:REGION_COLORS.Central, pc3:REGION_COLORS.Central, pc4:REGION_COLORS.Central, pc5:REGION_COLORS.Central, pc6:REGION_COLORS.Central,
+    ps1:REGION_COLORS.Southern, ps2:REGION_COLORS.Southern, ps3:REGION_COLORS.Southern, ps4:REGION_COLORS.Southern, ps5:REGION_COLORS.Southern
+  };
+
+  var svg = document.getElementById('map');
+  var stateLayer = document.getElementById('states');
+  var stateLabelLayer = document.getElementById('stateLabels');
+  var baseSpineLayer = document.getElementById('baseSpine');
+  var segLayer = document.getElementById('segments');
+  var tickLayer = document.getElementById('ticks');
+  var cityLayer = document.getElementById('cities');
+  var spurLayer = document.getElementById('spurs');
+  var officeLayer = document.getElementById('offices');
+  var icLayer = document.getElementById('interchanges');
+  var facLayer = document.getElementById('facilities');
+  var labelLayer = document.getElementById('regionLabels');
+  var tooltip = document.getElementById('tooltip');
+  var mapPanel = document.querySelector('.map-panel');
+  var detailBody = document.getElementById('detailBody');
+  var tableBody = document.getElementById('tableBody');
+  var tableTitle = document.getElementById('tableTitle');
+
+  function svgEl(tag, attrs){ var el = document.createElementNS('http://www.w3.org/2000/svg', tag); for (var k in attrs){ el.setAttribute(k, attrs[k]); } return el; }
+  function fmtKm(km){ if (km === null || km === undefined) return '—'; var r = Math.round(km * 10) / 10; return (r % 1 === 0 ? r.toFixed(0) : r.toFixed(1)); }
+
+  /* ---------- states ---------- */
+  // Kuala Lumpur's centroid sits a few px from Selangor's inside the same crowded Klang
+  // Valley pocket as the C3C4/C5 offices - its label is dropped, the state shape stays.
+  var SKIP_STATE_LABEL = { 'Kuala Lumpur': true };
+  STATES.forEach(function(s){
+    stateLayer.appendChild(svgEl('path', { class:'land ' + (s.onRoute?'route-state':'other-state'), d:s.d }));
+    if (!s.onRoute || SKIP_STATE_LABEL[s.name]) return; // skip labels for states the highway doesn't pass through / that collide
+    var label = svgEl('text', { class:'state-label route-state', x:s.cx, y:s.cy, 'text-anchor':'middle' });
+    label.textContent = s.name.toUpperCase();
+    stateLabelLayer.appendChild(label);
+  });
+
+  /* ---------- project points ---------- */
+  var XY = {};
+  SPINE_ORDER.forEach(function(name){ var p = SPINE_POINTS[name]; XY[name] = project(p.lon, p.lat); });
+  SPURS.forEach(function(s){ var xy = project(s.lon, s.lat); s.x = xy[0]; s.y = xy[1]; });
+
+  /* Interpolate a mainline KM chainage (per the official strip maps) into an XY point along
+     the existing SPINE_ORDER polyline, on the given leg ('N': Dewan Wawasan -> Bukit Lanjan,
+     ascending; 'S': Sungai Besi -> Johor Causeway, descending). Finds the pair of named
+     waypoints (from KM_ASC/KM_DESC) bracketing the km and linearly interpolates between their
+     already-projected XY positions. Falls back to the nearest table endpoint if km is outside
+     the table's range. */
+  function kmToLegXY(km, leg){
+    var table = leg === 'S' ? KM_DESC : KM_ASC;
+    for (var i = 0; i < table.length - 1; i++){
+      var a = table[i], b = table[i+1];
+      var lo = Math.min(a.km, b.km), hi = Math.max(a.km, b.km);
+      if (km >= lo - 1e-6 && km <= hi + 1e-6){
+        var t = (b.km === a.km) ? 0 : (km - a.km) / (b.km - a.km);
+        var pa = XY[a.name], pb = XY[b.name];
+        return { x: pa[0] + t*(pb[0]-pa[0]), y: pa[1] + t*(pb[1]-pa[1]) };
+      }
+    }
+    var first = table[0], last = table[table.length-1];
+    var nearest = Math.abs(km-first.km) <= Math.abs(km-last.km) ? first : last;
+    var p = XY[nearest.name];
+    return { x:p[0], y:p[1] };
+  }
+
+  OFFICES.forEach(function(o){
+    var xy = (o.km !== undefined) ? kmToLegXY(o.km, o.leg) : { x: project(o.lon, o.lat)[0], y: project(o.lon, o.lat)[1] };
+    o.x = xy.x; o.y = xy.y;
+  });
+  INTERCHANGES.forEach(function(ic){ var xy = kmToLegXY(ic.km, ic.leg); ic.x = xy.x; ic.y = xy.y; });
+
+  function idxOf(name){ return SPINE_ORDER.indexOf(name); }
+  function subpathD(fromName, toName){
+    var i0 = idxOf(fromName), i1 = idxOf(toName);
+    var lo = Math.min(i0,i1), hi = Math.max(i0,i1);
+    var d = '';
+    for (var i = lo; i <= hi; i++){ var p = XY[SPINE_ORDER[i]]; d += (i===lo?'M':'L') + p[0].toFixed(2) + ',' + p[1].toFixed(2) + ' '; }
+    return d.trim();
+  }
+  function normalAt(idx){
+    var a = XY[SPINE_ORDER[Math.max(0, idx-1)]], b = XY[SPINE_ORDER[Math.min(SPINE_ORDER.length-1, idx+1)]];
+    var dx = b[0]-a[0], dy = b[1]-a[1], mag = Math.hypot(dx,dy) || 1;
+    return { nx: -dy/mag, ny: dx/mag };
+  }
+
+  /* ---------- base spine (full extent, faint) ---------- */
+  (function(){
+    var full = subpathD('Bukit Kayu Hitam', 'Johor Causeway');
+    baseSpineLayer.appendChild(svgEl('path', { class:'base-spine', d: full }));
+    var gap = subpathD('Bukit Kayu Hitam', 'Dewan Wawasan');
+    baseSpineLayer.appendChild(svgEl('path', { class:'base-spine gap', d: gap }));
+  })();
+
+  /* ---------- tooltip ---------- */
+  function showTooltip(e, title, sub){ tooltip.innerHTML = '<b>' + title + '</b>' + sub; tooltip.style.display = 'block'; moveTooltip(e); }
+  function moveTooltip(e){ var rect = mapPanel.getBoundingClientRect(); tooltip.style.left = (e.clientX-rect.left+14)+'px'; tooltip.style.top = (e.clientY-rect.top+14)+'px'; }
+  function hideTooltip(){ tooltip.style.display = 'none'; }
+
+  /* ---------- touch-friendly label reveal ----------
+     Desktop relies on mouseenter/mouseleave to reveal the on-map labels this declutter
+     pass hides by default (tick/city/spur/facility names). Touch devices have no hover
+     state, so every one of those markers also gets a tap handler here that pins the
+     label + tooltip open until something else is tapped (or the map background is
+     tapped), via this single tracked "currently revealed" slot. */
+  var activeRevealClear = null;
+  function clearActiveReveal(){
+    if (activeRevealClear){ activeRevealClear(); activeRevealClear = null; }
+    hideTooltip();
+  }
+  function bindTapReveal(el, onReveal){
+    el.addEventListener('click', function(e){
+      clearActiveReveal();
+      onReveal.show(e);
+      activeRevealClear = onReveal.clear;
+      e.stopPropagation();
+    });
+  }
+  // tapping empty map area dismisses any pinned reveal (markers stopPropagation, so this
+  // only fires for genuine background taps - the touch equivalent of "mouse moved away")
+  svg.addEventListener('click', function(){ clearActiveReveal(); });
+
+  /* ---------- shared "point to this location" halo, used by search results ---------- */
+  function locateAt(x, y){
+    clearLocateHalo();
+    var h = svgEl('circle', { id:'locateHalo', class:'locate-halo', cx:x, cy:y, r:6 });
+    svg.appendChild(h);
+  }
+  function clearLocateHalo(){ var old = document.getElementById('locateHalo'); if (old) old.remove(); }
+
+  /* every distinct "thing you can select" (segment, spur, facility, office, interchange,
+     spine waypoint, state) shares one clear-before-select step so exactly one is ever
+     highlighted at a time, regardless of whether it was reached by tap or by search */
+  function clearAllSelections(){
+    Object.keys(groups).forEach(function(k){ groups[k].g.classList.remove('selected'); });
+    document.querySelectorAll('#tableBody tr').forEach(function(tr){ tr.classList.remove('selected'); });
+    Object.keys(spurEls).forEach(function(n){ spurEls[n].m.classList.remove('selected'); spurEls[n].lbl.classList.remove('selected'); });
+    selectedFacIdx = null;
+    var oldFacHalo = document.getElementById('facHaloGroup'); if (oldFacHalo) oldFacHalo.remove();
+    clearLocateHalo();
+  }
+
+  /* generic detail-panel writer for result types (office / interchange / spine waypoint /
+     state) that don't already have their own bespoke panel layout */
+  function showDetailGeneric(badgeText, title, rows, note){
+    document.getElementById('detail').querySelector('h2').textContent = 'Selection';
+    var dl = rows.map(function(r){ return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
+    detailBody.innerHTML =
+      '<span class="badge spur">' + badgeText + '</span>' +
+      '<h3>' + title + '</h3>' +
+      '<dl>' + dl + '</dl>' +
+      (note ? ('<p class="note">' + note + '</p>') : '');
+  }
+
+  /* ---------- spur markers (always visible) ---------- */
+  var spurEls = {};
+  SPURS.forEach(function(s){
+    var g = svgEl('g', {});
+    var m = svgEl('rect', { class:'spur-marker', x:s.x-4, y:s.y-4, width:8, height:8, rx:2, transform:'rotate(45 '+s.x+' '+s.y+')' });
+    var lbl = svgEl('text', { class:'spur-label', x:s.x+8, y:s.y+3 });
+    lbl.textContent = s.name;
+    g.appendChild(m); g.appendChild(lbl);
+    spurLayer.appendChild(g);
+    spurEls[s.name] = { m:m, lbl:lbl };
+    // label appears on hover (or stays if this spur is the current selection) - six spur
+    // markers cluttered the Klang Valley / N. Sembilan pocket with always-on text before
+    [m,lbl].forEach(function(el){
+      el.addEventListener('mouseenter', function(e){ lbl.classList.add('show'); showTooltip(e, s.name, s.note); });
+      el.addEventListener('mousemove', moveTooltip);
+      el.addEventListener('mouseleave', function(){ lbl.classList.remove('show'); hideTooltip(); });
+      el.addEventListener('click', function(){ selectSpur(s); });
+      bindTapReveal(el, {
+        show: function(e){ lbl.classList.add('show'); showTooltip(e, s.name, s.note); },
+        clear: function(){ lbl.classList.remove('show'); }
+      });
+    });
+  });
+
+  /* ---------- office markers (latest view only) ---------- */
+  var officeEls = [];
+  OFFICES.forEach(function(o){
+    var g = svgEl('g', { class:'office-group' });
+    if (o.regionOffice){
+      g.appendChild(svgEl('rect', { class:'office-ring', x:o.x-5.4, y:o.y-5.4, width:10.8, height:10.8, rx:2.5 }));
+    }
+    var m = svgEl('rect', { class:'office-marker' + (o.regionOffice ? ' region-office' : ''), x:o.x-3.2, y:o.y-3.2, width:6.4, height:6.4, rx:1.5 });
+    var lbl = svgEl('text', { class:'office-label' + (o.regionOffice ? ' region-office-label' : ''), x:o.x+7, y:o.y+3 });
+    lbl.textContent = o.name + (o.regionOffice ? ' ★' : '');
+    g.appendChild(m); g.appendChild(lbl);
+    officeLayer.appendChild(g);
+    officeEls.push(g);
+    [m,lbl].forEach(function(el){
+      el.addEventListener('mouseenter', function(e){
+        var title = (o.regionOffice ? 'Region + Section Office · ' : 'Section Office · ') + o.name;
+        showTooltip(e, title, o.region + ' · ' + o.section + (o.km !== undefined ? (' · KM ' + fmtKm(o.km)) : ''));
+      });
+      el.addEventListener('mousemove', moveTooltip);
+      el.addEventListener('mouseleave', hideTooltip);
+      bindTapReveal(el, {
+        show: function(e){
+          var title = (o.regionOffice ? 'Region + Section Office · ' : 'Section Office · ') + o.name;
+          showTooltip(e, title, o.region + ' · ' + o.section + (o.km !== undefined ? (' · KM ' + fmtKm(o.km)) : ''));
+        },
+        clear: function(){}
+      });
+    });
+  });
+
+  var PILL_MIDIDX_NUDGE = { central2: -2, central3: 2 };
+
+  /* ---------- state ---------- */
+  var currentView = 'latest';
+  var currentSegs = [];
+  var groups = {};
+  var selectedSpur = null;
+
+  function allSegsForView(view){
+    if (view === 'latest') return SEGMENTS_LATEST.concat(SEGMENTS_LATEST_OFFSPINE);
+    return SEGMENTS_PREVIOUS;
+  }
+
+  function clearDynamic(){
+    segLayer.innerHTML = ''; tickLayer.innerHTML = ''; cityLayer.innerHTML = ''; labelLayer.innerHTML = '';
+    tableBody.innerHTML = ''; groups = {};
+  }
+
+  function render(view){
+    currentView = view;
+    clearDynamic();
+    currentSegs = allSegsForView(view);
+    officeLayer.style.display = (view === 'latest') ? '' : 'none';
+
+    var spineSegs = currentSegs.filter(function(s){ return !s.offspine; });
+    var offSegs = currentSegs.filter(function(s){ return s.offspine; });
+
+    /* segments on the spine */
+    spineSegs.forEach(function(seg, idx){
+      var g = svgEl('g', { class:'seg-group', 'data-id': seg.id });
+      var d = subpathD(seg.fromP, seg.toP);
+      var hit = svgEl('path', { class:'seg-hit', d:d });
+      var line = svgEl('path', { class:'seg-line ' + (view==='latest'?'current':'superseded'), d:d, stroke: COLORS[seg.id] });
+      if (view === 'latest'){ line.style.strokeDasharray = '0'; } else { line.style.opacity = '0'; }
+      g.appendChild(hit); g.appendChild(line);
+      segLayer.appendChild(g);
+      groups[seg.id] = { g:g, line:line, seg:seg };
+
+      if (view === 'latest'){
+        var L = line.getTotalLength();
+        line.style.strokeDasharray = L + ' ' + L; line.style.strokeDashoffset = L;
+        line.getBoundingClientRect();
+        line.style.transition = 'stroke-dashoffset .9s ease ' + (0.1*idx) + 's, stroke-width .15s ease, filter .15s ease';
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ line.style.strokeDashoffset = '0'; }); });
+      } else {
+        line.style.transition = 'opacity .6s ease ' + (0.08*idx) + 's';
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){ line.style.opacity = '1'; }); });
+      }
+
+      hit.addEventListener('mouseenter', function(e){ showTooltip(e, seg.region + ' – ' + seg.section, 'KM ' + fmtKm(seg.kmStart) + ' – KM ' + fmtKm(seg.kmEnd)); });
+      hit.addEventListener('mousemove', moveTooltip);
+      hit.addEventListener('mouseleave', hideTooltip);
+      hit.addEventListener('click', function(){ selectSegment(seg.id); });
+
+      /* region/section pill label at midpoint - nudged off dead-center for C3C4/C5, whose
+         natural midpoint lands almost exactly on the Rawang/Bangi office markers in the
+         crowded Klang Valley pocket, so the pill and the office label used to stack */
+      var i0 = idxOf(seg.fromP), i1 = idxOf(seg.toP);
+      var midIdx = Math.round((i0+i1)/2) + (PILL_MIDIDX_NUDGE[seg.id] || 0);
+      midIdx = Math.max(Math.min(i0,i1), Math.min(Math.max(i0,i1), midIdx));
+      var p = XY[SPINE_ORDER[midIdx]];
+      var n = normalAt(midIdx);
+      var side = (seg.region === 'Northern' || seg.region === 'Southern') ? 1 : -1;
+      var lx = p[0] + n.nx*32*side, ly = p[1] + n.ny*32*side;
+      var text = svgEl('text', { x:lx, y:ly, class:'region-pill-text', fill:COLORS[seg.id], 'text-anchor':'middle' });
+      text.textContent = seg.section;
+      labelLayer.appendChild(text);
+      var bbox; try { bbox = text.getBBox(); } catch(e){ bbox = {x:lx-14,y:ly-8,width:28,height:12}; }
+      var pad = 4.5;
+      var rect = svgEl('rect', { class:'region-pill-bg', x:bbox.x-pad, y:bbox.y-pad*0.6, width:bbox.width+pad*2, height:bbox.height+pad*1.2, rx:4, stroke:COLORS[seg.id], opacity:0.7 });
+      labelLayer.insertBefore(rect, text);
+      var leader = svgEl('line', { x1:p[0], y1:p[1], x2:lx, y2:ly, stroke:COLORS[seg.id], 'stroke-width':0.6, opacity:0.35 });
+      labelLayer.insertBefore(leader, rect);
+    });
+
+    /* off-spine segments: link to spur marker, add a colored ring + pill */
+    offSegs.forEach(function(seg){
+      var spur = SPURS.filter(function(s){ return s.name === seg.anchor; })[0];
+      if (!spur) return;
+      var g = svgEl('g', { class:'seg-group', 'data-id': seg.id });
+      var ring = svgEl('circle', { class:'seg-hit', cx:spur.x, cy:spur.y, r:9, fill:'transparent', stroke:'transparent' });
+      var visRing = svgEl('circle', { cx:spur.x, cy:spur.y, r:7, fill:'none', stroke:COLORS[seg.id], 'stroke-width':2, opacity:view==='latest'?0.95:0.6, 'stroke-dasharray': view==='latest' ? 'none':'2 2' });
+      g.appendChild(ring); g.appendChild(visRing);
+      segLayer.appendChild(g);
+      groups[seg.id] = { g:g, line:visRing, seg:seg, isSpur:true };
+      ring.addEventListener('click', function(){ selectSegment(seg.id); });
+      ring.addEventListener('mouseenter', function(e){ showTooltip(e, seg.region + ' – ' + seg.section, seg.desc); });
+      ring.addEventListener('mousemove', moveTooltip);
+      ring.addEventListener('mouseleave', hideTooltip);
+    });
+
+    /* ticks at named spine boundary points (dedupe, collect multiple km values e.g. chainage-system change points) */
+    var boundaries = {};
+    spineSegs.forEach(function(seg){
+      [['fromP','kmStart'],['toP','kmEnd']].forEach(function(pair){
+        var name = seg[pair[0]], km = seg[pair[1]];
+        if (!boundaries[name]) boundaries[name] = [];
+        if (boundaries[name].indexOf(km) === -1) boundaries[name].push(km);
+      });
+    });
+    Object.keys(boundaries).forEach(function(name){
+      var idx = idxOf(name); var p = XY[name]; var n = normalAt(idx);
+      var x1=p[0]-n.nx*8, y1=p[1]-n.ny*8, x2=p[0]+n.nx*8, y2=p[1]+n.ny*8;
+      tickLayer.appendChild(svgEl('line', { class:'tick-line', x1:x1,y1:y1,x2:x2,y2:y2 }));
+      var tdot = svgEl('circle', { class:'tick-dot', cx:p[0], cy:p[1], r:2.6, stroke:'#eaf1fb' });
+      var thit = svgEl('circle', { cx:p[0], cy:p[1], r:11, fill:'transparent', stroke:'transparent', style:'cursor:pointer;' });
+      tickLayer.appendChild(thit);
+      tickLayer.appendChild(tdot);
+      var lx = p[0]+n.nx*13, ly = p[1]+n.ny*13; var anchor = n.nx>=0?'start':'end';
+      var kms = boundaries[name].sort(function(a,b){return b-a;});
+      var t1 = svgEl('text', { class:'tick-label', x:lx, y:ly, 'text-anchor':anchor });
+      t1.textContent = kms.map(function(k){return 'KM '+fmtKm(k);}).join(' / ');
+      tickLayer.appendChild(t1);
+      var t2 = svgEl('text', { class:'tick-sub', x:lx, y:ly+9, 'text-anchor':anchor });
+      t2.textContent = name;
+      tickLayer.appendChild(t2);
+      // KM chainage label shown on hover only - keeps the busy Klang Valley / Perak
+      // clusters legible while the figure stays one tap/hover away
+      [tdot, thit].forEach(function(el){
+        el.addEventListener('mouseenter', function(e){
+          t1.classList.add('show'); t2.classList.add('show');
+          showTooltip(e, name, 'Boundary point · ' + t1.textContent);
+        });
+        el.addEventListener('mousemove', moveTooltip);
+        el.addEventListener('mouseleave', function(){ t1.classList.remove('show'); t2.classList.remove('show'); hideTooltip(); });
+        bindTapReveal(el, {
+          show: function(e){ t1.classList.add('show'); t2.classList.add('show'); showTooltip(e, name, 'Boundary point · ' + t1.textContent); },
+          clear: function(){ t1.classList.remove('show'); t2.classList.remove('show'); }
+        });
+      });
+    });
+
+    /* reference city dots: spine points not used as a boundary in this view, excluding BKH,
+       and excluding points already shown as an office marker in the latest view */
+    var officeNames = {};
+    OFFICES.forEach(function(o){ officeNames[o.name] = true; });
+    SPINE_ORDER.forEach(function(name, idx){
+      if (name === 'Bukit Kayu Hitam') return;
+      if (boundaries[name]) return;
+      if (view === 'latest' && officeNames[name]) return;
+      var p = XY[name]; var n = normalAt(idx);
+      var lx = p[0]-n.nx*9, ly = p[1]-n.ny*9; var anchor = (-n.nx)>=0 ? 'start':'end';
+      var dot = svgEl('circle', { class:'city-dot', cx:p[0], cy:p[1], r:1.4 });
+      var dhit = svgEl('circle', { cx:p[0], cy:p[1], r:9, fill:'transparent', stroke:'transparent', style:'cursor:pointer;' });
+      cityLayer.appendChild(dhit);
+      cityLayer.appendChild(dot);
+      var label = svgEl('text', { class:'city-label', x:lx, y:ly+3, 'text-anchor':anchor });
+      label.textContent = name;
+      cityLayer.appendChild(label);
+      [dot, dhit].forEach(function(el){
+        el.addEventListener('mouseenter', function(e){ label.classList.add('show'); showTooltip(e, name, 'Reference point along the route'); });
+        el.addEventListener('mousemove', moveTooltip);
+        el.addEventListener('mouseleave', function(){ label.classList.remove('show'); hideTooltip(); });
+        bindTapReveal(el, {
+          show: function(e){ label.classList.add('show'); showTooltip(e, name, 'Reference point along the route'); },
+          clear: function(){ label.classList.remove('show'); }
+        });
+      });
+    });
+
+    /* table */
+    tableTitle.textContent = 'Section register — ' + (view==='latest' ? 'Latest alignment' : 'Previous alignment');
+    currentSegs.forEach(function(seg){
+      var tr = document.createElement('tr');
+      tr.setAttribute('data-id', seg.id);
+      var officeOrAnchor = seg.office ? seg.office : (seg.anchor ? seg.anchor : '—');
+      tr.innerHTML =
+        '<td class="sw"><span class="sw-dot" style="background:' + COLORS[seg.id] + '"></span></td>' +
+        '<td>' + seg.region + '</td>' +
+        '<td>' + seg.section + '</td>' +
+        '<td>' + fmtKm(seg.kmStart) + '\u2013' + fmtKm(seg.kmEnd) + '</td>' +
+        '<td>' + seg.totalKm + ' km</td>' +
+        '<td>' + officeOrAnchor + '</td>';
+      tr.addEventListener('click', function(){ selectSegment(seg.id); });
+      tableBody.appendChild(tr);
+    });
+
+    detailBody.innerHTML = 'Select a region/section, spur marker, or office on the map, or a row in the table below, to view its details.';
+    document.getElementById('detail').querySelector('h2').textContent = 'Selection';
+  }
+
+  function selectSegment(id){
+    clearAllSelections();
+    Object.keys(groups).forEach(function(k){ groups[k].g.classList.toggle('selected', k === id); });
+    document.querySelectorAll('tbody tr').forEach(function(tr){ tr.classList.toggle('selected', tr.getAttribute('data-id') === id); });
+    var seg = groups[id].seg;
+    var badgeClass = currentView === 'latest' ? 'current' : 'superseded';
+    var badgeText = currentView === 'latest' ? 'Current' : 'Superseded';
+    var extraHtml = (seg.extra && seg.extra.length) ? '<ul class="extra">' + seg.extra.map(function(e){return '<li>'+e+'</li>';}).join('') + '</ul>' : '';
+    detailBody.innerHTML =
+      '<span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
+      '<h3>' + seg.region + ' — ' + seg.section + '</h3>' +
+      '<dl>' +
+        '<dt>Region</dt><dd>' + seg.region + '</dd>' +
+        '<dt>Section</dt><dd>' + seg.section + '</dd>' +
+        '<dt>Chainage</dt><dd>KM ' + fmtKm(seg.kmStart) + ' \u2013 KM ' + fmtKm(seg.kmEnd) + '</dd>' +
+        '<dt>Total (stated)</dt><dd>' + seg.totalKm + ' km</dd>' +
+        (seg.office ? '<dt>Office</dt><dd>' + seg.office + '</dd>' : '') +
+      '</dl>' +
+      '<p class="note">' + seg.desc + '</p>' + extraHtml;
+  }
+
+  function selectSpur(spur){
+    clearAllSelections();
+    Object.keys(spurEls).forEach(function(n){ spurEls[n].m.classList.toggle('selected', n===spur.name); spurEls[n].lbl.classList.toggle('selected', n===spur.name); });
+    locateAt(spur.x, spur.y);
+    document.getElementById('detail').querySelector('h2').textContent = 'Selection';
+    detailBody.innerHTML =
+      '<span class="badge spur">Spur / link road</span>' +
+      '<h3>' + spur.name + '</h3>' +
+      '<p class="note">' + spur.note + '</p>';
+  }
+
+  /* ---------- facilities (RSA / Layby / OBR / Vista Point / Tunnel) ---------- */
+
+  var SPINE_SEGS_LATEST = SEGMENTS_LATEST.filter(function(s){ return !s.offspine; });
+
+  /* precompute each facility's exact on-corridor position from its KM chainage (not a
+     town-level lon/lat) and its coarse Latest-alignment section/office, once */
+  FACILITIES2.forEach(function(f){
+    var xy = kmToLegXY(f.km, f.leg);
+    f.x = xy.x; f.y = xy.y;
+    f.sectionId = SECTION_TO_SEG[f.section] || null;
+    var seg = f.sectionId ? (SEGMENTS_LATEST.filter(function(s){ return s.id === f.sectionId; })[0]) : null;
+    f.office = seg ? seg.office : '\u2014';
+  });
+
+  function typeShape(cx, cy, type, cls){
+    if (type === 'Layby'){ return svgEl('rect', { class:'fac-marker '+cls, x:cx-3, y:cy-3, width:6, height:6, rx:1 }); }
+    if (type === 'OBR'){ return svgEl('rect', { class:'fac-marker '+cls, x:cx-3.2, y:cy-3.2, width:6.4, height:6.4, rx:1, transform:'rotate(45 '+cx+' '+cy+')' }); }
+    if (type === 'Vista Point'){ return svgEl('polygon', { class:'fac-marker '+cls, points: cx+','+(cy-3.6)+' '+(cx-3.4)+','+(cy+2.6)+' '+(cx+3.4)+','+(cy+2.6) }); }
+    if (type === 'Tunnel'){ return svgEl('rect', { class:'fac-marker tunnel', x:cx-3.6, y:cy-2.2, width:7.2, height:4.4, rx:1 }); }
+    return svgEl('circle', { class:'fac-marker '+cls, cx:cx, cy:cy, r:3.2 }); // R&R
+  }
+  var facVisible = false;
+  var facMarkerRefs = {};
+  var selectedFacIdx = null;
+  function markerCenter(el){
+    if (el.tagName === 'circle'){ return [parseFloat(el.getAttribute('cx')), parseFloat(el.getAttribute('cy'))]; }
+    if (el.tagName === 'polygon'){
+      var pts = el.getAttribute('points').split(' ').map(function(p){ return p.split(',').map(Number); });
+      var sx = pts.reduce(function(s,p){return s+p[0];},0)/pts.length, sy = pts.reduce(function(s,p){return s+p[1];},0)/pts.length;
+      return [sx, sy];
+    }
+    var x = parseFloat(el.getAttribute('x')), y = parseFloat(el.getAttribute('y'));
+    var w = parseFloat(el.getAttribute('width')), h = parseFloat(el.getAttribute('height'));
+    return [x + w/2, y + h/2];
+  }
+  function renderFacilities(){
+    facLayer.innerHTML = '';
+    facMarkerRefs = {};
+    if (!facVisible) return;
+    FACILITIES2.forEach(function(f, idx){
+      // Fixed screen-relative offset (not the local perpendicular-to-travel normal used
+      // elsewhere) so colour reads consistently left/right of the line at every bend of
+      // the corridor: SB (blue) always on the right, NB (red) always on the left. Tunnels
+      // (no direction) sit centred on the line with no offset.
+      var side = f.dir === 'SB' ? 1 : (f.dir === 'NB' ? -1 : 0);
+      var mx = f.x + side*5, my = f.y;
+      var cls = f.dir === 'NB' ? 'nb' : (f.dir === 'SB' ? 'sb' : 'tunnel');
+      var label = svgEl('text', { class:'fac-label', x:mx+6, y:my-4 });
+      label.textContent = f.name;
+      var m = typeShape(mx, my, f.type, cls);
+      m.setAttribute('data-idx', idx);
+      facMarkerRefs[idx] = [m];
+      facLayer.appendChild(m);
+      m.addEventListener('mouseenter', function(e){
+        label.classList.add('show');
+        var dirTxt = f.dir ? (f.dir + ' \u00b7 ') : '';
+        showTooltip(e, f.name + ' \u2014 ' + f.type, dirTxt + 'KM ' + fmtKm(f.km) + ' \u00b7 ' + f.section + '<br>Office: ' + f.office);
+      });
+      m.addEventListener('mousemove', moveTooltip);
+      m.addEventListener('mouseleave', function(){ label.classList.remove('show'); hideTooltip(); });
+      m.addEventListener('click', function(){ selectFacility(idx); });
+      bindTapReveal(m, {
+        show: function(e){
+          label.classList.add('show');
+          var dirTxt = f.dir ? (f.dir + ' \u00b7 ') : '';
+          showTooltip(e, f.name + ' \u2014 ' + f.type, dirTxt + 'KM ' + fmtKm(f.km) + ' \u00b7 ' + f.section + '<br>Office: ' + f.office);
+        },
+        clear: function(){ label.classList.remove('show'); }
+      });
+      facLayer.appendChild(label);
+    });
+    if (selectedFacIdx !== null) applyFacSelectionStyle();
+  }
+
+  function applyFacSelectionStyle(){
+    // remove any existing halo
+    var old = document.getElementById('facHaloGroup');
+    if (old) old.remove();
+    if (selectedFacIdx === null || !facMarkerRefs[selectedFacIdx]) return;
+    var g = svgEl('g', { id:'facHaloGroup' });
+    facMarkerRefs[selectedFacIdx].forEach(function(el){
+      var c = markerCenter(el);
+      g.appendChild(svgEl('circle', { class:'fac-halo', cx:c[0], cy:c[1], r:6 }));
+    });
+    facLayer.appendChild(g);
+    document.querySelectorAll('#facTableBody tr').forEach(function(tr){
+      tr.classList.toggle('selected', Number(tr.getAttribute('data-idx')) === selectedFacIdx);
+    });
+  }
+
+  function selectFacility(idx){
+    clearAllSelections();
+    selectedFacIdx = idx;
+    if (!facVisible){
+      facVisible = true;
+      document.querySelectorAll('#facToggle button').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-fac') === 'on'); });
+      document.getElementById('facCard').style.display = '';
+    }
+    renderFacilities();
+
+    var f = FACILITIES2[idx];
+    document.getElementById('detail').querySelector('h2').textContent = 'Selection';
+    detailBody.innerHTML =
+      '<span class="badge spur">' + f.type + '</span>' +
+      '<h3>' + f.name + '</h3>' +
+      '<dl>' +
+        '<dt>Type</dt><dd>' + f.type + '</dd>' +
+        (f.dir ? ('<dt>Direction</dt><dd>' + f.dir + '</dd>') : '') +
+        '<dt>KM</dt><dd>' + fmtKm(f.km) + '</dd>' +
+        '<dt>Section</dt><dd>' + f.section + '</dd>' +
+        '<dt>Section office</dt><dd>' + f.office + '</dd>' +
+      '</dl>' +
+      '<p class="note">Now plotted on the map \u2014 look for the pulsing marker. KM chainage from the official CRO/NRO/SRO strip maps; office assignment follows the coarse Latest-alignment segment, not an official PLUS jurisdiction record.</p>';
+    mapPanel.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+
+  function populateFacTable(){
+    var tbody = document.getElementById('facTableBody');
+    tbody.innerHTML = '';
+
+    // build ordered groups: each Latest spine section (already N\u2192S), then the ELITE loop
+    var groups = SPINE_SEGS_LATEST.map(function(seg){ return { key: seg.id, label: seg.office + ' \u00b7 ' + seg.section, items: [] }; });
+    groups.push({ key: 'central4', label: 'Seafield \u00b7 C6 (ELITE loop)', items: [] });
+    groups.push({ key: null, label: 'Unassigned', items: [] });
+    var groupByKey = {}; groups.forEach(function(g){ groupByKey[g.key] = g; });
+
+    FACILITIES2.forEach(function(f, idx){
+      var g = groupByKey[f.sectionId] || groupByKey[null];
+      g.items.push(idx);
+    });
+    groups.forEach(function(g){ g.items.sort(function(a,b){ return FACILITIES2[a].km*(FACILITIES2[a].leg==='S'?-1:1) - FACILITIES2[b].km*(FACILITIES2[b].leg==='S'?-1:1); }); });
+
+    groups.forEach(function(g){
+      if (!g.items.length) return;
+      var hdr = document.createElement('tr');
+      hdr.className = 'group-row';
+      hdr.innerHTML = '<td colspan="5">' + g.label + '</td>';
+      tbody.appendChild(hdr);
+      g.items.forEach(function(idx){
+        var f = FACILITIES2[idx];
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-idx', idx);
+        var typeClass = f.type === 'R&R' ? 'rr' : (f.type === 'OBR' ? 'obr' : (f.type === 'Vista Point' ? 'vista' : (f.type === 'Tunnel' ? 'tunnel' : 'layby')));
+        tr.innerHTML =
+          '<td>' + f.name + '</td>' +
+          '<td><span class="type-tag ' + typeClass + '">' + f.type + '</span></td>' +
+          '<td>' + (f.dir || '\u2014') + '</td>' +
+          '<td>' + fmtKm(f.km) + '</td>' +
+          '<td>' + f.section + '</td>';
+        tr.addEventListener('click', function(){ selectFacility(idx); });
+        tbody.appendChild(tr);
+      });
+    });
+  }
+  populateFacTable();
+
+  /* ---------- interchanges / toll plazas (opt-in layer) ---------- */
+  var icVisible = false;
+  function renderInterchanges(){
+    icLayer.innerHTML = '';
+    if (!icVisible) return;
+    INTERCHANGES.forEach(function(ic){
+      var xy = kmToLegXY(ic.km, ic.leg);
+      var isToll = ic.kind === 'toll' || ic.kind === 'ic+toll';
+      var m = svgEl('circle', { class:'ic-marker' + (isToll ? ' toll' : ''), cx:xy.x, cy:xy.y, r: 2.3 });
+      var hit = svgEl('circle', { cx:xy.x, cy:xy.y, r:9, fill:'transparent', stroke:'transparent', style:'cursor:pointer;' });
+      icLayer.appendChild(hit);
+      icLayer.appendChild(m);
+      function reveal(e){
+        var kindTxt = ic.kind === 'toll' ? 'Toll plaza' : (ic.kind === 'ic' ? 'Interchange' : 'Interchange + toll plaza');
+        var icTxt = ic.ic ? (' \u00b7 IC ' + ic.ic) : '';
+        var offTxt = ic.office ? ('<br>' + (ic.office === 'region+section' ? 'Region + Section office' : 'Section office')) : '';
+        showTooltip(e, ic.name, kindTxt + icTxt + ' \u00b7 KM ' + fmtKm(ic.km) + ' \u00b7 ' + ic.section + offTxt);
+      }
+      [m, hit].forEach(function(el){
+        el.addEventListener('mouseenter', reveal);
+        el.addEventListener('mousemove', moveTooltip);
+        el.addEventListener('mouseleave', hideTooltip);
+        bindTapReveal(el, { show: reveal, clear: function(){} });
+      });
+    });
+  }
+  renderInterchanges();
+
+  /* ---------- selection handlers for search-only result types ----------
+     Segments/spurs/facilities already have their own select*() above, reused as-is by
+     search. Offices, interchanges, spine waypoints and states never had one (they were
+     hover-only), so search needs a "land here" handler for each. */
+  function selectOffice(o){
+    clearAllSelections();
+    locateAt(o.x, o.y);
+    mapPanel.scrollIntoView({ behavior:'smooth', block:'center' });
+    var rows = [['Region', o.region], ['Section', o.section]];
+    if (o.km !== undefined) rows.push(['KM', fmtKm(o.km)]);
+    showDetailGeneric(o.regionOffice ? 'Region + Section Office \u2605' : 'Section Office', o.name, rows,
+      'Office marker on the map \u2014 look for the pulsing ring.');
+  }
+
+  function selectInterchange(ic){
+    if (!icVisible){
+      icVisible = true;
+      document.querySelectorAll('#icToggle button').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-ic') === 'on'); });
+      renderInterchanges();
+    }
+    clearAllSelections();
+    locateAt(ic.x, ic.y);
+    mapPanel.scrollIntoView({ behavior:'smooth', block:'center' });
+    var kindTxt = ic.kind === 'toll' ? 'Toll plaza' : (ic.kind === 'ic' ? 'Interchange' : 'Interchange + toll plaza');
+    var rows = [['Section', ic.section], ['KM', fmtKm(ic.km)]];
+    if (ic.ic) rows.push(['IC no.', ic.ic]);
+    var note = ic.office ? ('Also ' + (ic.office === 'region+section' ? 'a Region + Section office.' : 'a Section office.')) : '';
+    showDetailGeneric(kindTxt, ic.name, rows, note);
+  }
+
+  function kmLookupByName(name){
+    var hit = KM_ASC.filter(function(p){ return p.name === name; })[0];
+    if (hit) return { km: hit.km, leg: 'N' };
+    hit = KM_DESC.filter(function(p){ return p.name === name; })[0];
+    if (hit) return { km: hit.km, leg: 'S' };
+    return null;
+  }
+  function selectSpinePoint(name){
+    clearAllSelections();
+    var xy = XY[name];
+    locateAt(xy[0], xy[1]);
+    mapPanel.scrollIntoView({ behavior:'smooth', block:'center' });
+    var km = kmLookupByName(name);
+    var rows = km ? [['Chainage', 'KM ' + fmtKm(km.km) + ' (' + (km.leg === 'N' ? 'ascending leg' : 'descending leg') + ')']] : [];
+    showDetailGeneric('Waypoint', name, rows, 'Reference point along the NSE corridor.');
+  }
+
+  function selectStateResult(s){
+    clearAllSelections();
+    locateAt(s.cx, s.cy);
+    mapPanel.scrollIntoView({ behavior:'smooth', block:'center' });
+    showDetailGeneric('State', s.name, [['On NSE corridor', s.onRoute ? 'Yes' : 'No']], '');
+  }
+
+  /* ---------- toggle controls ---------- */
+  document.getElementById('viewToggle').addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-view]');
+    if (!btn) return;
+    document.querySelectorAll('#viewToggle button').forEach(function(b){ b.classList.toggle('active', b===btn); });
+    render(btn.getAttribute('data-view'));
+  });
+  document.getElementById('facToggle').addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-fac]');
+    if (!btn) return;
+    document.querySelectorAll('#facToggle button').forEach(function(b){ b.classList.toggle('active', b===btn); });
+    facVisible = btn.getAttribute('data-fac') === 'on';
+    document.getElementById('facCard').style.display = facVisible ? '' : 'none';
+    renderFacilities();
+  });
+  document.getElementById('icToggle').addEventListener('click', function(e){
+    var btn = e.target.closest('button[data-ic]');
+    if (!btn) return;
+    document.querySelectorAll('#icToggle button').forEach(function(b){ b.classList.toggle('active', b===btn); });
+    icVisible = btn.getAttribute('data-ic') === 'on';
+    renderInterchanges();
+  });
+
+  /* ---------- scale bar ---------- */
+  (function(){
+    var g = document.getElementById('scalebar');
+    var bar = 50 * PX_PER_KM;
+    g.appendChild(svgEl('line', { x1:0, y1:0, x2:bar, y2:0 }));
+    [0,25,50].forEach(function(km){
+      var x = km*PX_PER_KM;
+      g.appendChild(svgEl('line', { x1:x, y1:-3, x2:x, y2:3 }));
+      var t = svgEl('text', { x:x, y:14, 'text-anchor':'middle' }); t.textContent = km; g.appendChild(t);
+    });
+    var lbl = svgEl('text', { x:bar/2, y:-7, 'text-anchor':'middle' }); lbl.textContent = 'KM'; g.appendChild(lbl);
+  })();
+
+  /* ---------- search ----------
+     One flat index across every named thing on the map - built once (segments/offices/
+     spurs/facilities/interchanges/states/spine waypoints don't change shape at runtime,
+     only which ones are *visible* does, and each action() below turns on whatever layer
+     or view it needs before landing on the result). */
+  var SEARCH_INDEX = [];
+  (function buildSearchIndex(){
+    var officeNames = {}; OFFICES.forEach(function(o){ officeNames[o.name] = true; });
+
+    SEGMENTS_LATEST.concat(SEGMENTS_LATEST_OFFSPINE).forEach(function(seg){
+      SEARCH_INDEX.push({ name: seg.region + ' ' + seg.section, sub: 'Section \u00b7 Latest', group: 'Sections',
+        action: function(){ switchView('latest'); selectSegment(seg.id); } });
+    });
+    SEGMENTS_PREVIOUS.forEach(function(seg){
+      SEARCH_INDEX.push({ name: seg.region + ' ' + seg.section, sub: 'Section \u00b7 Previous', group: 'Sections',
+        action: function(){ switchView('previous'); selectSegment(seg.id); } });
+    });
+    OFFICES.forEach(function(o){
+      SEARCH_INDEX.push({ name: o.name, sub: (o.regionOffice ? 'Region + Section office' : 'Section office'), group: 'Offices',
+        action: function(){ selectOffice(o); } });
+    });
+    SPURS.forEach(function(s){
+      SEARCH_INDEX.push({ name: s.name, sub: 'Spur / link road', group: 'Spurs & links',
+        action: function(){ selectSpur(s); mapPanel.scrollIntoView({ behavior:'smooth', block:'center' }); } });
+    });
+    FACILITIES2.forEach(function(f, idx){
+      SEARCH_INDEX.push({ name: f.name, sub: f.type + (f.dir ? ' \u00b7 ' + f.dir : '') + ' \u00b7 KM ' + fmtKm(f.km), group: 'RSA / Layby / OBR',
+        action: function(){ selectFacility(idx); } });
+    });
+    INTERCHANGES.forEach(function(ic){
+      SEARCH_INDEX.push({ name: ic.name, sub: (ic.kind === 'toll' ? 'Toll plaza' : ic.kind === 'ic' ? 'Interchange' : 'Interchange + toll') + ' \u00b7 KM ' + fmtKm(ic.km), group: 'Interchanges & toll',
+        action: function(){ selectInterchange(ic); } });
+    });
+    SPINE_ORDER.forEach(function(name){
+      if (officeNames[name] || name === 'Bukit Kayu Hitam') return;
+      SEARCH_INDEX.push({ name: name, sub: 'Waypoint', group: 'Cities & waypoints',
+        action: function(){ selectSpinePoint(name); } });
+    });
+    STATES.forEach(function(s){
+      SEARCH_INDEX.push({ name: s.name, sub: 'State', group: 'States',
+        action: function(){ selectStateResult(s); } });
+    });
+  })();
+
+  function switchView(view){
+    if (currentView === view) return;
+    document.querySelectorAll('#viewToggle button').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view') === view); });
+    render(view);
+  }
+
+  var searchInput = document.getElementById('searchInput');
+  var searchResults = document.getElementById('searchResults');
+  var searchClear = document.getElementById('searchClear');
+  var GROUP_ORDER = ['Sections', 'Offices', 'Cities & waypoints', 'RSA / Layby / OBR', 'Interchanges & toll', 'Spurs & links', 'States'];
+
+  function runSearch(q){
+    q = q.trim().toLowerCase();
+    if (!q){ searchResults.classList.remove('show'); searchResults.innerHTML = ''; return; }
+    var hits = SEARCH_INDEX.filter(function(item){ return item.name.toLowerCase().indexOf(q) !== -1; }).slice(0, 60);
+    searchResults.innerHTML = '';
+    if (!hits.length){
+      searchResults.innerHTML = '<div class="search-empty">No matches for \u201c' + q.replace(/</g,'') + '\u201d</div>';
+      searchResults.classList.add('show');
+      return;
+    }
+    var byGroup = {};
+    hits.forEach(function(h){ (byGroup[h.group] = byGroup[h.group] || []).push(h); });
+    GROUP_ORDER.forEach(function(g){
+      if (!byGroup[g]) return;
+      var lbl = document.createElement('div'); lbl.className = 'search-group-label'; lbl.textContent = g;
+      searchResults.appendChild(lbl);
+      byGroup[g].slice(0, 12).forEach(function(item){
+        var row = document.createElement('div'); row.className = 'search-item';
+        row.innerHTML = '<span class="name">' + item.name + '</span><span class="sub">' + item.sub + '</span>';
+        row.addEventListener('click', function(){
+          item.action();
+          searchInput.value = item.name;
+          searchResults.classList.remove('show');
+          searchClear.hidden = false;
+        });
+        searchResults.appendChild(row);
+      });
+    });
+    searchResults.classList.add('show');
+  }
+
+  searchInput.addEventListener('input', function(){
+    searchClear.hidden = !searchInput.value;
+    runSearch(searchInput.value);
+  });
+  searchInput.addEventListener('focus', function(){ if (searchInput.value) runSearch(searchInput.value); });
+  searchClear.addEventListener('click', function(){
+    searchInput.value = ''; searchClear.hidden = true;
+    searchResults.classList.remove('show'); searchResults.innerHTML = '';
+    searchInput.focus();
+  });
+  searchInput.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){ searchResults.classList.remove('show'); searchInput.blur(); }
+    if (e.key === 'Enter'){
+      var first = searchResults.querySelector('.search-item');
+      if (first) first.click();
+    }
+  });
+  document.addEventListener('click', function(e){
+    if (!document.getElementById('searchWrap').contains(e.target)) searchResults.classList.remove('show');
+  });
+
+  render('latest');
+})();
+</script>
+<script>
+  // Registers only when actually served over HTTPS (or localhost) - browsers refuse
+  // service workers on file:// or plain http://, so this silently no-ops otherwise
+  // rather than throwing, until the app is hosted somewhere that supports it.
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(err){
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>

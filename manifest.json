@@ -1,0 +1,16 @@
+{
+  "name": "PLUS NSE Region & Section Boundary Map",
+  "short_name": "NSE Boundary Map",
+  "description": "Interactive Northern/Central/Southern region and section-office boundary map for the PLUS North–South Expressway, with RSA/layby, interchange, and location search.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a2540",
+  "theme_color": "#0a2540",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
